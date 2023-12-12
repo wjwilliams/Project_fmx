@@ -8,35 +8,52 @@ output:
 
 README for Financial Econometrics Project Essay.
 
-```{r}
-
-rm(list = ls()) # Clean your environment:
-gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
-library(tidyverse)
-list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
-```
 
 Topic:  Time-Varying correlation comparison of local indices
 	* Drivers of TV-correlation estimates over time
 	* Comparing Financials, Industrials and Resources - how their dynamic correlations changed over time, perhaps related to interest rate regimes / currency volatilty regimes.
 	
+
+```{r}
+
+rm(list = ls()) # Clean your environment:
+gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+library(tidyverse)
+library(lubridate)
+library(fmxdat)
+library(tbl2xts)
+library(rmsfuns)
+library(glue)
+library(PortfolioAnalytics)
+library(rugarch)
+library(forecast)
+library(gridExtra)
+library(kableExtra)
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+# Data wrangling
+Read in the data
+```{r}
+alsi_raw <- read_rds("data/ALSI.rds")
+currency <- read_rds("data/USDZAR.rds")
+repo_raw <- read.csv("data/HistoricalRateDetail.csv")
+```
+
+
 	
 I am going to use the data from the practical exam. It is the ALSI and SWIX all share indexes. I am not sure if I should do the analysis on just one of the indexes or both so I am just going to start with both and I can always go back and just work with one.
 ```{r}
-# Read in the data 
-alsi_raw <- read_rds("data/ALSI.rds")
-
 #Lets rename the J403 to SWIX and J203 to ALSI and get them as different data sets. 
 alsi_df <- alsi_raw %>% 
     rename("ALSI" = "J203", "SWIX"= "J403") %>% 
-    mutate(ALSI = coalesce(ALSI,0)) %>% 
+    mutate(ALSI = coalesce(ALSI,0)) %>% #This is what i should have done it the practical but we live and learn
     mutate(SWIX = coalesce(SWIX,0))
 
 # Now I use a function that incorporates the rmsfuns safe portfolio returns
 #I do this for all three sectors and for each fund
 #SWIX
 swix_fin<- calculate_sector_returns(alsi_df, "Financials", "SWIX") %>% 
-    rename("Resources"="PortfolioReturn")
+    rename("Financials"="PortfolioReturn")
 
 swix_rec<- calculate_sector_returns(alsi_df, "Resources", "SWIX") %>% 
     rename("Resources"="PortfolioReturn")
@@ -46,7 +63,7 @@ swix_ind <- calculate_sector_returns(alsi_df, "Industrials", "SWIX") %>%
 
 #ALSI
 alsi_fin<- calculate_sector_returns(alsi_df, "Financials", "ALSI") %>% 
-    rename("Resources"="PortfolioReturn")
+    rename("Financials"="PortfolioReturn")
 
 alsi_rec<- calculate_sector_returns(alsi_df, "Resources", "ALSI") %>% 
     rename("Resources"="PortfolioReturn")
@@ -67,4 +84,132 @@ alsi_portret <-
 
 
 ```
+
+Now I want to read in the data of the interest rate and exchange rate
+```{r}
+# Let's clean up the repo data a bit
+repo<- repo_raw %>% 
+    slice(-(1:2)) %>%
+    rename("repo"= "Description") %>% 
+    mutate(date = ymd(Indicator)) %>% 
+    filter(date>ymd(20121231)) %>% 
+    select(date, repo)
+
+
+```
+# Garch fitting
+## Return Persistence
+This follows the practical and is complete with respect to the necessary tests of ARCH
+```{r}
+#I wrapped the code from the practical into a function where i just need to give the data (as a tbl) sector and it outputs the return persistence graphs
+return_persistence_plotter(alsi_portret, "Financials")
+
+```
+
+```{r}
+return_persistence_plotter(alsi_portret, "Resources")
+
+```
+
+
+
+```{r}
+return_persistence_plotter(alsi_portret, "Industrials")
+
+```
+
+## Auto correlation functions
+```{r}
+#here I again use the ggAcf, theme_fmx and finlot as well as gridExtra to get a nice plot of each sectors autocorrelation
+acf_plotter(alsi_portret, "Financials")
+```
+
+
+```{r}
+acf_plotter(alsi_portret, "Resources")
+
+```
+
+
+```{r}
+acf_plotter(alsi_portret, "Industrials")
+
+```
+
+## Box tests
+
+```{r}
+box_test<- function(data, sector){
+    if(sector == "Financials"){
+        play_df<- data %>%
+            select(date, Financials) %>%
+            tbl_xts()
+    }
+
+    if(sector == "Resources"){
+        play_df<- data %>%
+            select(date, Resources) %>%
+            tbl_xts()
+    }
+
+    if(sector == "Industrials"){
+        play_df<- data %>%
+            select(date, Industrials) %>%
+            tbl_xts()
+    }
+ box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
+
+  # Create a data frame with the test result
+  result_df <- data.frame(
+    TestStatistic = box_test_result$statistic,
+    PValue = box_test_result$p.value,
+    Lag = box_test_result$parameter
+  )
+
+  # Print the data frame as a nice table using kable
+  kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
+
+}
+box_test(alsi_portret, "Financials")
+```
+
+
+```{r}
+box_test_all_sectors <- function(data, sectors) {
+  results_list <- list()
+
+  for (sector in sectors) {
+    if (sector %in% colnames(data)) {
+      play_df <- data %>%
+        select(date, !!sym(sector)) %>%
+        tbl_xts()
+
+      box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
+
+      results_list[[sector]] <- data.frame(
+        Sector = sector,
+        TestStatistic = box_test_result$statistic,
+        PValue = box_test_result$p.value,
+        Lag = box_test_result$parameter
+      )
+    } else {
+      warning(paste("Sector", sector, "not found in the data. Skipping."))
+    }
+  }
+   # Combine all results into a single data frame
+  result_df <- do.call(rbind, results_list)
+
+  # Print the data frame as a nice table using kable
+  kable(result_df, caption = "Ljung-Box Test Results")
+}
+
+box_test_all_sectors(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
+```
+
+
+
+
+
+
+
 
