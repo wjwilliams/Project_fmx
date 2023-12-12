@@ -1,0 +1,70 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Purpose
+
+README for Financial Econometrics Project Essay.
+
+```{r}
+
+rm(list = ls()) # Clean your environment:
+gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+library(tidyverse)
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+Topic:  Time-Varying correlation comparison of local indices
+	* Drivers of TV-correlation estimates over time
+	* Comparing Financials, Industrials and Resources - how their dynamic correlations changed over time, perhaps related to interest rate regimes / currency volatilty regimes.
+	
+	
+I am going to use the data from the practical exam. It is the ALSI and SWIX all share indexes. I am not sure if I should do the analysis on just one of the indexes or both so I am just going to start with both and I can always go back and just work with one.
+```{r}
+# Read in the data 
+alsi_raw <- read_rds("data/ALSI.rds")
+
+#Lets rename the J403 to SWIX and J203 to ALSI and get them as different data sets. 
+alsi_df <- alsi_raw %>% 
+    rename("ALSI" = "J203", "SWIX"= "J403") %>% 
+    mutate(ALSI = coalesce(ALSI,0)) %>% 
+    mutate(SWIX = coalesce(SWIX,0))
+
+# Now I use a function that incorporates the rmsfuns safe portfolio returns
+#I do this for all three sectors and for each fund
+#SWIX
+swix_fin<- calculate_sector_returns(alsi_df, "Financials", "SWIX") %>% 
+    rename("Resources"="PortfolioReturn")
+
+swix_rec<- calculate_sector_returns(alsi_df, "Resources", "SWIX") %>% 
+    rename("Resources"="PortfolioReturn")
+
+swix_ind <- calculate_sector_returns(alsi_df, "Industrials", "SWIX") %>% 
+    rename("Industrials"="PortfolioReturn")
+
+#ALSI
+alsi_fin<- calculate_sector_returns(alsi_df, "Financials", "ALSI") %>% 
+    rename("Resources"="PortfolioReturn")
+
+alsi_rec<- calculate_sector_returns(alsi_df, "Resources", "ALSI") %>% 
+    rename("Resources"="PortfolioReturn")
+
+alsi_ind <- calculate_sector_returns(alsi_df, "Industrials", "ALSI") %>% 
+    rename("Industrials"="PortfolioReturn")
+
+
+#Now I just need to join them together into two data frames that will then be used to do the garch analysis
+swix_portret <- 
+    left_join(swix_fin, swix_rec, by = "date") %>% 
+    left_join(. , swix_ind, by = "date")
+
+alsi_portret <- 
+    left_join(alsi_fin, alsi_rec, by = "date") %>% 
+    left_join(., alsi_ind, by = "date")
+
+
+
+```
+
