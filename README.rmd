@@ -29,6 +29,9 @@ library(rugarch)
 library(forecast)
 library(gridExtra)
 library(kableExtra)
+library(rmgarch)
+library(MTS)
+library(robustbase)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
 ```
 # Data wrangling
@@ -205,6 +208,162 @@ box_test_all_sectors <- function(data, sectors) {
 box_test_all_sectors(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
 ```
 
+## Rugarch
+
+
+```{r}
+
+
+# Wrapping the function from the practical into a function so that it can be mapped onto 
+garch_model_comparison <- function(data, sector) {
+  models <- 1:4
+  model_list <- list()
+
+  for (p in models) {
+    garchfit <- ugarchspec(
+      variance.model = list(model = c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")[p], garchOrder = c(1, 1)),
+      mean.model = list(armaOrder = c(1, 0), include.mean = TRUE),
+      distribution.model = c("norm", "snorm", "std", "sstd", "ged", "sged", "nig", "ghyp", "jsu")[1]
+    )
+
+    garchfit1 <- ugarchfit(spec = garchfit, data = as.numeric(data[[sector]]))
+    model_list[[p]] <- garchfit1
+  }
+
+  names(model_list) <- c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")
+
+  fit_mat <- sapply(model_list, infocriteria)
+  rownames(fit_mat) <- rownames(infocriteria(model_list[[1]]))
+
+  # Combine the results into a single data frame
+  result_df <- data.frame(
+    Sector = sector,
+    fit_mat
+  )
+
+  result_df
+}
+
+# Apply the GARCH model comparison to all sectors
+sectors <- c("Financials", "Resources", "Industrials")
+garch_results <- lapply(sectors, function(sector) garch_model_comparison(alsi_portret, sector))
+
+# Combine the results into a single data frame
+combined_results <- do.call(rbind, garch_results)
+
+# Print the combined results as a nice table using kable
+kable(combined_results, caption = "GARCH Model Comparison Results")
+
+```
+apARCH performs the best for Financials and Resources so we will use that for the fit. 
+
+I think it could be informative to show the news impact curves to highlight the differences between the different types of model specs
+```{r}
+
+
+```
+
+
+# Multivariate
+```{r}
+renamingdcc <- function(ReturnSeries, DCC.TV.Cor) {
+  
+ncolrtn <- ncol(ReturnSeries)
+namesrtn <- colnames(ReturnSeries)
+paste(namesrtn, collapse = "_")
+
+nam <- c()
+xx <- mapply(rep, times = ncolrtn:1, x = namesrtn)
+# Now let's be creative in designing a nested for loop to save the names corresponding to the columns of interest.. 
+
+# TIP: draw what you want to achieve on a paper first. Then apply code.
+
+# See if you can do this on your own first.. Then check vs my solution:
+
+nam <- c()
+for (j in 1:(ncolrtn)) {
+for (i in 1:(ncolrtn)) {
+  nam[(i + (j-1)*(ncolrtn))] <- paste(xx[[j]][1], xx[[i]][1], sep="_")
+}
+}
+
+colnames(DCC.TV.Cor) <- nam
+
+# So to plot all the time-varying correlations wrt SBK:
+ # First append the date column that has (again) been removed...
+DCC.TV.Cor <- 
+    data.frame( cbind( date = index(ReturnSeries), DCC.TV.Cor)) %>% # Add date column which dropped away...
+    mutate(date = as.Date(date)) %>%  tbl_df() 
+
+DCC.TV.Cor <- DCC.TV.Cor %>% gather(Pairs, Rho, -date)
+
+DCC.TV.Cor
+
+}
+```
+
+
+```{r}
+
+xts_rtn <- alsi_portret %>% 
+    rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials")%>% tbl_xts()
+
+#Now set the specifications for the go garch
+uspec <- ugarchspec(variance.model = list(model = "apARCH", 
+    garchOrder = c(1, 1)), mean.model = list(armaOrder = c(1, 
+    0), include.mean = TRUE), distribution.model = "sstd")
+
+multi_univ_garch_spec <- multispec(replicate(ncol(xts_rtn), uspec))
+
+spec.go <- gogarchspec(multi_univ_garch_spec, 
+                       distribution.model = 'mvnorm', # or manig.
+                       ica = 'fastica') # Note: we use the fastICA
+cl <- makePSOCKcluster(10)
+multf <- multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)
+
+fit.gogarch <- gogarchfit(spec.go, 
+                      data = xts_rtn, 
+                      solver = 'hybrid', 
+                      cluster = cl, 
+                      gfun = 'tanh', 
+                      maxiter1 = 40000, 
+                      epsilon = 1e-08, 
+                      rseed = 100)
+
+gog.time.var.cor <- rcor(fit.gogarch)
+gog.time.var.cor <- aperm(gog.time.var.cor,c(3,2,1))
+dim(gog.time.var.cor) <- c(nrow(gog.time.var.cor), ncol(gog.time.var.cor)^2)
+# Finally:
+gog.time.var.cor <-
+renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
+
+```
+```{r}
+go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
+    !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: FIN")
+
+go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs), 
+    !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: REC")
+
+go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs), 
+    !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: IND")
+
+```
+
+```{r}
+finplot(go1)
+```
+
+```{r}
+finplot(go2)
+```
+
+```{r}
+finplot(go3)
+```
 
 
 
