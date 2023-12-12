@@ -187,7 +187,6 @@ box_test_all_sectors <- function(data, sectors) {
       box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
 
       results_list[[sector]] <- data.frame(
-        Sector = sector,
         TestStatistic = box_test_result$statistic,
         PValue = box_test_result$p.value,
         Lag = box_test_result$parameter

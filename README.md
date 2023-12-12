@@ -14,8 +14,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 464169 24.8     991545   53         NA   669302 35.8
-    ## Vcells 862314  6.6    8388608   64      16384  1840208 14.1
+    ## Ncells 464168 24.8     991542   53         NA   669302 35.8
+    ## Vcells 862307  6.6    8388608   64      16384  1840208 14.1
 
 ``` r
 library(tidyverse)
@@ -411,7 +411,6 @@ box_test_all_sectors <- function(data, sectors) {
       box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
 
       results_list[[sector]] <- data.frame(
-        Sector = sector,
         TestStatistic = box_test_result$statistic,
         PValue = box_test_result$p.value,
         Lag = box_test_result$parameter
@@ -438,9 +437,6 @@ Ljung-Box Test Results
 <tr>
 <th style="text-align:left;">
 </th>
-<th style="text-align:left;">
-Sector
-</th>
 <th style="text-align:right;">
 TestStatistic
 </th>
@@ -454,9 +450,6 @@ Lag
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left;">
-Financials
-</td>
 <td style="text-align:left;">
 Financials
 </td>
@@ -474,9 +467,6 @@ Financials
 <td style="text-align:left;">
 Resources
 </td>
-<td style="text-align:left;">
-Resources
-</td>
 <td style="text-align:right;">
 1431.3349
 </td>
@@ -488,9 +478,6 @@ Resources
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-Industrials
-</td>
 <td style="text-align:left;">
 Industrials
 </td>
