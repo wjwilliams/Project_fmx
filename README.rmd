@@ -94,7 +94,8 @@ Now I want to read in the data of the interest rate and exchange rate
 repo<- repo_raw %>% 
     slice(-(1:2)) %>%
     rename("repo"= "Description") %>% 
-    mutate(date = ymd(Indicator)) %>% 
+    mutate(date = ymd(Indicator),
+           repo = as.numeric(repo)/100) %>% 
     filter(date>ymd(20121231)) %>% 
     select(date, repo)
 
@@ -171,7 +172,6 @@ box_test<- function(data, sector){
 
   # Print the data frame as a nice table using kable
   kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
-
 }
 box_test(alsi_portret, "Financials")
 ```
@@ -310,9 +310,16 @@ DCC.TV.Cor
 
 ```{r}
 xts_rtn <- alsi_portret %>% 
-    rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials")%>% tbl_xts() # This is to get more easible readible paies
-#although i may change it back since there are only 2 correlations per graph
+    rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials") %>% # This is to get more easible readible paies
+    left_join(., currency %>% mutate(EX = value/lag(value)-1) %>% filter(date > first(date)) %>% select(date, EX), by = "date") %>% 
+    tbl_xts()
 
+
+
+
+```
+
+```{r}
 #Now set the specifications for both the dcc and go-garch
 #a) Set the Univaariate GARCH  spec (using aparch from the table above)
 uspec <- ugarchspec(variance.model = list(model = "apARCH", 
@@ -377,15 +384,27 @@ dcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs),
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")
 
-grid.arrange(finplot(dcc_plot1), finplot(dcc_plot2))
+# Lastly for Industrials
+dcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
+    !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")
+
+
+finplot(dcc_plot1)
 
 ```
 
+```{r}
+finplot(dcc_plot2)
+```
 
+```{r}
+finplot(dcc_plot3)
+```
 
 ## aDCC
 ```{r}
-spec.dcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
+spec.adcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
     distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
         "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
 
@@ -397,6 +416,8 @@ cl = makePSOCKcluster(10)
 # Fit the univariate series for each column
 multf = multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)
 
+fit.adcc = dccfit(spec.adcc, data = xts_rtn, solver = "solnp", 
+    cluster = cl, fit.control = list(eval.se = FALSE), fit = multf)
 
 # Testing the models fit: Tsay (2014)
 RcovList <- rcov(fit.dcc)  # This is now a list of the monthly covariances of our DCC model series.
@@ -409,18 +430,51 @@ mc1 = MCHdiag(xts_rtn, covmat)
 # Now to save the time-varying correlations as specified by
 # the DCC model, it again requires some gymnastics from our
 # side.  First consider what the list looks like:
-dcc.time.var.cor <- rcor(fit.dcc)
-print(dcc.time.var.cor[, , 1:3])
+adcc.time.var.cor <- rcor(fit.adcc)
+print(adcc.time.var.cor[, , 1:3])
 
 # Now again follow the code in the prac to ensure we end up with bivariate pairs
 # rather than lists of matrices
-dcc.time.var.cor <- aperm(dcc.time.var.cor, c(3, 2, 1))
-dim(dcc.time.var.cor) <- c(nrow(dcc.time.var.cor), ncol(dcc.time.var.cor)^2)
+adcc.time.var.cor <- aperm(adcc.time.var.cor, c(3, 2, 1))
+dim(adcc.time.var.cor) <- c(nrow(adcc.time.var.cor), ncol(adcc.time.var.cor)^2)
 
 #For ease of extraction we call on the renaming dcc function 
-dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.var.cor)
+adcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = adcc.time.var.cor)
 ```
 
+```{r}
+adcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
+    !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Financials")+
+       theme(axis.title.x = element_blank())
+
+
+#Now Resources
+adcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
+    !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")
+
+# Lastly for Industrials
+adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
+    !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")
+
+
+```
+
+```{r}
+finplot(adcc_plot1)
+```
+
+```{r}
+finplot(adcc_plot2)
+
+```
+
+```{r}
+finplot(adcc_plot3)
+
+```
 
 ## GO-GARCH
 ```{r}
@@ -477,7 +531,7 @@ finplot(go2)
 finplot(go3)
 ```
 
-# Exchange rate volatility and interest rate regimes
+
 
 
 
