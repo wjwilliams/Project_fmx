@@ -14,8 +14,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 464496 24.9     992480 53.1         NA   669302 35.8
-    ## Vcells 864093  6.6    8388608 64.0      16384  1840208 14.1
+    ## Ncells 464625 24.9     992848 53.1         NA   669302 35.8
+    ## Vcells 865053  6.6    8388608 64.0      16384  1840208 14.1
 
 ``` r
 library(tidyverse)
@@ -832,7 +832,12 @@ highlight the differences between the different types of model specs
 
 # Multivariate
 
+Following the literature (Cite) comparisons between DCC, aDCC GO-GARCH
+are used.
+
 ``` r
+#For all of the multivariate estimates we need to call in the renamingdcc function from the practical to make the extraction of the correlation 
+# estimates easier 
 renamingdcc <- function(ReturnSeries, DCC.TV.Cor) {
   
 ncolrtn <- ncol(ReturnSeries)
@@ -869,17 +874,209 @@ DCC.TV.Cor
 }
 ```
 
+## DCC
+
 ``` r
 xts_rtn <- alsi_portret %>% 
-    rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials")%>% tbl_xts()
+    rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials")%>% tbl_xts() # This is to get more easible readible paies
+#although i may change it back since there are only 2 correlations per graph
 
-#Now set the specifications for the go garch
+#Now set the specifications for both the dcc and go-garch
+#a) Set the Univaariate GARCH  spec (using aparch from the table above)
 uspec <- ugarchspec(variance.model = list(model = "apARCH", 
     garchOrder = c(1, 1)), mean.model = list(armaOrder = c(1, 
     0), include.mean = TRUE), distribution.model = "sstd")
 
+# b) repeat the uspec n times 
 multi_univ_garch_spec <- multispec(replicate(ncol(xts_rtn), uspec))
 
+#c) now we set the DCC specs
+spec.dcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
+    distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
+        "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
+
+# d) Enable clustering for speed:
+cl = makePSOCKcluster(10)
+
+
+# Step 2
+# Fit the univariate series for each column
+multf = multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)
+
+# Now we can use multf to estimate the dcc model using our
+# dcc.spec:
+fit.dcc = dccfit(spec.dcc, data = xts_rtn, solver = "solnp", 
+    cluster = cl, fit.control = list(eval.se = FALSE), fit = multf)
+
+# Testing the models fit: Tsay (2014)
+RcovList <- rcov(fit.dcc)  # This is now a list of the monthly covariances of our DCC model series.
+covmat = matrix(RcovList, nrow(xts_rtn), ncol(xts_rtn) * ncol(xts_rtn), 
+    byrow = TRUE)
+mc1 = MCHdiag(xts_rtn, covmat)
+```
+
+    ## Test results:  
+    ## Q(m) of et: 
+    ## Test and p-value:  23.73738 0.008328827 
+    ## Rank-based test: 
+    ## Test and p-value:  13.87855 0.1786036 
+    ## Qk(m) of epsilon_t: 
+    ## Test and p-value:  129.9106 0.003786325 
+    ## Robust Qk(m):  
+    ## Test and p-value:  102.9113 0.1662754
+
+``` r
+# Now to save the time-varying correlations as specified by
+# the DCC model, it again requires some gymnastics from our
+# side.  First consider what the list looks like:
+dcc.time.var.cor <- rcor(fit.dcc)
+print(dcc.time.var.cor[, , 1:3])
+```
+
+    ## , , 2013-01-02
+    ## 
+    ##           FIN       REC       IND
+    ## FIN 1.0000000 0.3283553 0.5638009
+    ## REC 0.3283553 1.0000000 0.4643220
+    ## IND 0.5638009 0.4643220 1.0000000
+    ## 
+    ## , , 2013-01-03
+    ## 
+    ##           FIN       REC      IND
+    ## FIN 1.0000000 0.3939528 0.576704
+    ## REC 0.3939528 1.0000000 0.474679
+    ## IND 0.5767040 0.4746790 1.000000
+    ## 
+    ## , , 2013-01-04
+    ## 
+    ##           FIN       REC       IND
+    ## FIN 1.0000000 0.3885041 0.5765758
+    ## REC 0.3885041 1.0000000 0.4602480
+    ## IND 0.5765758 0.4602480 1.0000000
+
+``` r
+# Now again follow the code in the prac to ensure we end up with bivariate pairs
+# rather than lists of matrices
+dcc.time.var.cor <- aperm(dcc.time.var.cor, c(3, 2, 1))
+dim(dcc.time.var.cor) <- c(nrow(dcc.time.var.cor), ncol(dcc.time.var.cor)^2)
+
+#For ease of extraction we call on the renaming dcc function 
+dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.var.cor)
+```
+
+    ## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
+    ## ℹ Please use `tibble::as_tibble()` instead.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+``` r
+#Now lets get the two plots
+#Starting with financials
+dcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
+    !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Financials")+
+       theme(axis.title.x = element_blank())
+```
+
+    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
+    ## with windowsFonts().
+
+``` r
+#Now Resources
+dcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
+    !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")
+```
+
+    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
+    ## with windowsFonts().
+
+``` r
+grid.arrange(finplot(dcc_plot1), finplot(dcc_plot2))
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-17-1.png)
+
+## aDCC
+
+``` r
+spec.dcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
+    distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
+        "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
+
+# d) Enable clustering for speed:
+cl = makePSOCKcluster(10)
+
+
+# Step 2
+# Fit the univariate series for each column
+multf = multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)
+
+
+# Testing the models fit: Tsay (2014)
+RcovList <- rcov(fit.dcc)  # This is now a list of the monthly covariances of our DCC model series.
+covmat = matrix(RcovList, nrow(xts_rtn), ncol(xts_rtn) * ncol(xts_rtn), 
+    byrow = TRUE)
+mc1 = MCHdiag(xts_rtn, covmat)
+```
+
+    ## Test results:  
+    ## Q(m) of et: 
+    ## Test and p-value:  23.73738 0.008328827 
+    ## Rank-based test: 
+    ## Test and p-value:  13.87855 0.1786036 
+    ## Qk(m) of epsilon_t: 
+    ## Test and p-value:  129.9106 0.003786325 
+    ## Robust Qk(m):  
+    ## Test and p-value:  102.9113 0.1662754
+
+``` r
+# Now to save the time-varying correlations as specified by
+# the DCC model, it again requires some gymnastics from our
+# side.  First consider what the list looks like:
+dcc.time.var.cor <- rcor(fit.dcc)
+print(dcc.time.var.cor[, , 1:3])
+```
+
+    ## , , 2013-01-02
+    ## 
+    ##           FIN       REC       IND
+    ## FIN 1.0000000 0.3283553 0.5638009
+    ## REC 0.3283553 1.0000000 0.4643220
+    ## IND 0.5638009 0.4643220 1.0000000
+    ## 
+    ## , , 2013-01-03
+    ## 
+    ##           FIN       REC      IND
+    ## FIN 1.0000000 0.3939528 0.576704
+    ## REC 0.3939528 1.0000000 0.474679
+    ## IND 0.5767040 0.4746790 1.000000
+    ## 
+    ## , , 2013-01-04
+    ## 
+    ##           FIN       REC       IND
+    ## FIN 1.0000000 0.3885041 0.5765758
+    ## REC 0.3885041 1.0000000 0.4602480
+    ## IND 0.5765758 0.4602480 1.0000000
+
+``` r
+# Now again follow the code in the prac to ensure we end up with bivariate pairs
+# rather than lists of matrices
+dcc.time.var.cor <- aperm(dcc.time.var.cor, c(3, 2, 1))
+dim(dcc.time.var.cor) <- c(nrow(dcc.time.var.cor), ncol(dcc.time.var.cor)^2)
+
+#For ease of extraction we call on the renaming dcc function 
+dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.var.cor)
+```
+
+    ## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
+    ## ℹ Please use `tibble::as_tibble()` instead.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+## GO-GARCH
+
+``` r
 spec.go <- gogarchspec(multi_univ_garch_spec, 
                        distribution.model = 'mvnorm', # or manig.
                        ica = 'fastica') # Note: we use the fastICA
@@ -911,7 +1108,7 @@ renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
 ``` r
 go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: FIN")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")
 ```
 
     ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
@@ -920,7 +1117,7 @@ go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs),
 ``` r
 go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: REC")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")
 ```
 
     ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
@@ -929,7 +1126,7 @@ go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs),
 ``` r
 go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: IND")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")
 ```
 
     ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
@@ -939,16 +1136,18 @@ go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs),
 finplot(go1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
 
 ``` r
 finplot(go2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-22-1.png)
 
 ``` r
 finplot(go3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-23-1.png)
+
+# Exchange rate volatility and interest rate regimes
