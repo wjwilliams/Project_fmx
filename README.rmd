@@ -309,9 +309,10 @@ DCC.TV.Cor
 ## DCC 
 
 ```{r}
+library(tidyverse)
 xts_rtn <- alsi_portret %>% 
     rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials") %>% # This is to get more easible readible paies
-    left_join(., currency %>% mutate(EX = value/lag(value)-1) %>% filter(date > first(date)) %>% select(date, EX), by = "date") %>% 
+    left_join(., currency %>% mutate(EX = value/lag(value)-1) %>% filter(date > dplyr::first(date)) %>% select(date, EX), by = "date") %>% 
     tbl_xts()
 
 
@@ -320,6 +321,7 @@ xts_rtn <- alsi_portret %>%
 ```
 
 ```{r}
+library(rmgarch)
 #Now set the specifications for both the dcc and go-garch
 #a) Set the Univaariate GARCH  spec (using aparch from the table above)
 uspec <- ugarchspec(variance.model = list(model = "apARCH", 
