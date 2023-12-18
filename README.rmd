@@ -120,38 +120,38 @@ repo<- repo_raw %>%
 This follows the practical and is complete with respect to the necessary tests of ARCH. From here I only use the ALSI index but I can simply input the swix_portret instead of alsi_portret for all the functions and do the analysis on the SWIX as well.
 ## Return Persistence
 I created a function that essentially wrapped the code to plot the return persistence into a function so I can plot each sector.
-```{r}
+```{r warning=FALSE}
 #I wrapped the code from the practical into a function where i just need to give the data (as a tbl) sector and it outputs the return persistence graphs
 return_persistence_plotter(data = alsi_portret, sector =  "Financials")
 
 ```
 
-```{r}
+```{r warning=FALSE}
 return_persistence_plotter(alsi_portret, "Resources")
 
 ```
 
 
 
-```{r}
+```{r warning=FALSE}
 return_persistence_plotter(alsi_portret, "Industrials")
 
 ```
 
 ## Auto correlation functions
-```{r}
+```{r warning=FALSE}
 #here I again use the ggAcf, theme_fmx and finlot as well as gridExtra to get a nice plot of each sectors autocorrelation
 acf_plotter(alsi_portret, "Financials")
 ```
 
 
-```{r}
+```{r warning=FALSE}
 acf_plotter(alsi_portret, "Resources")
 
 ```
 
 
-```{r}
+```{r warning=FALSE}
 acf_plotter(alsi_portret, "Industrials")
 
 ```
@@ -308,7 +308,7 @@ xts_rtn <- alsi_portret %>%
 
 ```
 
-```{r}
+```{r warning=FALSE}
 library(rmgarch)
 #Now set the specifications for both the dcc and go-garch
 #a) Set the Univaariate GARCH  spec (using aparch from the table above)
@@ -360,7 +360,7 @@ dim(dcc.time.var.cor) <- c(nrow(dcc.time.var.cor), ncol(dcc.time.var.cor)^2)
 dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.var.cor)
 ```
 
-```{r}
+```{r warning=FALSE}
 #Now lets get the two plots
 #Starting with financials
 dcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
@@ -384,16 +384,16 @@ finplot(dcc_plot1)
 
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(dcc_plot2)
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(dcc_plot3)
 ```
 
 ## aDCC
-```{r}
+```{r warning=FALSE}
 spec.adcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
     distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
         "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
@@ -432,7 +432,7 @@ dim(adcc.time.var.cor) <- c(nrow(adcc.time.var.cor), ncol(adcc.time.var.cor)^2)
 adcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = adcc.time.var.cor)
 ```
 
-```{r}
+```{r warning=FALSE}
 adcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Financials")+
@@ -452,22 +452,22 @@ adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs),
 
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(adcc_plot1)
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(adcc_plot2)
 
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(adcc_plot3)
 
 ```
 
 ## GO-GARCH
-```{r}
+```{r warning=FALSE}
 
 
 
@@ -494,7 +494,7 @@ gog.time.var.cor <-
 renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
 
 ```
-```{r}
+```{r warning=FALSE}
 go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")
@@ -509,15 +509,15 @@ go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs),
 
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(go1)
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(go2)
 ```
 
-```{r}
+```{r warning=FALSE}
 finplot(go3)
 ```
 

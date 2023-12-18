@@ -24,8 +24,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 465939 24.9     996602 53.3         NA   669302 35.8
-    ## Vcells 868810  6.7    8388608 64.0      16384  1840206 14.1
+    ## Ncells 465959 24.9     996660 53.3         NA   669302 35.8
+    ## Vcells 868870  6.7    8388608 64.0      16384  1840206 14.1
 
 ``` r
 library(tidyverse)
@@ -260,26 +260,17 @@ persistence into a function so I can plot each sector.
 return_persistence_plotter(data = alsi_portret, sector =  "Financials")
 ```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
 ![](README_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 ``` r
 return_persistence_plotter(alsi_portret, "Resources")
 ```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
 ![](README_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 ``` r
 return_persistence_plotter(alsi_portret, "Industrials")
 ```
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
 ![](README_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
@@ -290,71 +281,17 @@ return_persistence_plotter(alsi_portret, "Industrials")
 acf_plotter(alsi_portret, "Financials")
 ```
 
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
 ![](README_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 ``` r
 acf_plotter(alsi_portret, "Resources")
 ```
 
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
 ![](README_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 ``` r
 acf_plotter(alsi_portret, "Industrials")
 ```
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-    ## Warning in ggplot2::geom_segment(lineend = "butt", ...): Ignoring unknown
-    ## parameters: `main`
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
 ![](README_files/figure-markdown_github/unnamed-chunk-10-1.png) The ACFs
 show that there does appear to be strong conditional heteroskedasticity
@@ -952,11 +889,6 @@ dim(dcc.time.var.cor) <- c(nrow(dcc.time.var.cor), ncol(dcc.time.var.cor)^2)
 dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.var.cor)
 ```
 
-    ## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
-    ## ℹ Please use `tibble::as_tibble()` instead.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
 ``` r
 #Now lets get the two plots
 #Starting with financials
@@ -964,32 +896,19 @@ dcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs),
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Financials")+
        theme(axis.title.x = element_blank())
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
-``` r
 #Now Resources
 dcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-``` r
 # Lastly for Industrials
 dcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
-``` r
 finplot(dcc_plot1)
 ```
 
@@ -1084,40 +1003,23 @@ dim(adcc.time.var.cor) <- c(nrow(adcc.time.var.cor), ncol(adcc.time.var.cor)^2)
 adcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = adcc.time.var.cor)
 ```
 
-    ## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
-    ## ℹ Please use `tibble::as_tibble()` instead.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
 ``` r
 adcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Financials")+
        theme(axis.title.x = element_blank())
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
-``` r
 #Now Resources
 adcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-``` r
 # Lastly for Industrials
 adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")
 ```
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
 ``` r
 finplot(adcc_plot1)
@@ -1163,37 +1065,19 @@ gog.time.var.cor <-
 renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
 ```
 
-    ## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
-    ## ℹ Please use `tibble::as_tibble()` instead.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
 ``` r
 go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-``` r
 go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")
-```
 
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
-
-``` r
 go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")
 ```
-
-    ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
-    ## with windowsFonts().
 
 ``` r
 finplot(go1)
