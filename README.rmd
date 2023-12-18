@@ -10,16 +10,16 @@ The purpose of this README is to guide readers as well as myself through my code
 
 
 Topic:  Time-Varying correlation comparison of local indices
-\begin(itemize)
-\item Drivers of TV-correlation estimates over time
+
+* Drivers of TV-correlation estimates over time
 	
-\item  Comparing Financials, Industrials and Resources - how their dynamic correlations changed over time, perhaps related to interest rate regimes / currency volatilty regimes.
-\end{itemize}
+* Comparing Financials, Industrials and Resources - how their dynamic correlations changed over time, perhaps related to interest rate regimes / currency volatilty regimes.
+
 	
 
 # Loading packages
 I have added the packages that I use at the beginning with the exception of rmgarch because it has conflicts with packeages in the tidyverse
-```{r}
+```{r warning=FALSE}
 
 rm(list = ls()) # Clean your environment:
 gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
@@ -49,12 +49,12 @@ repo_raw <- read.csv("data/HistoricalRateDetail.csv")
 
 
 The following code chunk wrangles and cleans the data. The calculate_sector_returns functions does the following:
-\begin{itemize}
-\item uses an if function to select a fund (fund_name), extracts the specified sector (sector_name), reweights the weights to sum to 1
-\item creates a weights and return xts data frame to use with rmsfun safe portfolio return calculator
-\item calculates the sector return and extracts the relevant components (contribution, weights and value)
-\item joins the components together to give the final total return for each sector
-\end{itemize}
+
+* Uses an if function to select a fund (fund_name), extracts the specified sector (sector_name), reweights the weights to sum to 1
+* Creates a weights and return xts data frame to use with rmsfun safe portfolio return calculator
+* Calculates the sector return and extracts the relevant components (contribution, weights and value)
+* Joins the components together to give the final total return for each sector
+
 
 I then rename the portfolio return to the sector name and join the all the sectors in each index together,
 ```{r}
@@ -113,12 +113,13 @@ repo<- repo_raw %>%
 
 
 ```
-# Garch fitting
+# Garch fitting and ARCH testing
+This follows the practical and is complete with respect to the necessary tests of ARCH. From here I only use the ALSI index but I can simply input the swix_portret instead of alsi_portret for all the functions and do the analysis on the SWIX as well.
 ## Return Persistence
-This follows the practical and is complete with respect to the necessary tests of ARCH
+I created a function that essentially wrapped the code to plot the return persistence into a function so I can plot each sector.
 ```{r}
 #I wrapped the code from the practical into a function where i just need to give the data (as a tbl) sector and it outputs the return persistence graphs
-return_persistence_plotter(alsi_portret, "Financials")
+return_persistence_plotter(data = alsi_portret, sector =  "Financials")
 
 ```
 
@@ -151,41 +152,42 @@ acf_plotter(alsi_portret, "Resources")
 acf_plotter(alsi_portret, "Industrials")
 
 ```
+The ACFs show that there does appear to be strong conditional heteroskedasticity and long memory showing that there is large return persistence but it is also necassary to conduct a formal box test to prove it.
 
 ## Box tests
-
+I started by writing a function that could output the box test for each sector but then decided to rather include a for loop that gets the relavant statistics for each sector and rbinds them together and outputs a single table.
 ```{r}
-box_test<- function(data, sector){
-    if(sector == "Financials"){
-        play_df<- data %>%
-            select(date, Financials) %>%
-            tbl_xts()
-    }
-
-    if(sector == "Resources"){
-        play_df<- data %>%
-            select(date, Resources) %>%
-            tbl_xts()
-    }
-
-    if(sector == "Industrials"){
-        play_df<- data %>%
-            select(date, Industrials) %>%
-            tbl_xts()
-    }
- box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
-
-  # Create a data frame with the test result
-  result_df <- data.frame(
-    TestStatistic = box_test_result$statistic,
-    PValue = box_test_result$p.value,
-    Lag = box_test_result$parameter
-  )
-
-  # Print the data frame as a nice table using kable
-  kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
-}
-box_test(alsi_portret, "Financials")
+# box_test<- function(data, sector){
+#     if(sector == "Financials"){
+#         play_df<- data %>%
+#             select(date, Financials) %>%
+#             tbl_xts()
+#     }
+# 
+#     if(sector == "Resources"){
+#         play_df<- data %>%
+#             select(date, Resources) %>%
+#             tbl_xts()
+#     }
+# 
+#     if(sector == "Industrials"){
+#         play_df<- data %>%
+#             select(date, Industrials) %>%
+#             tbl_xts()
+#     }
+#  box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
+# 
+#   # Create a data frame with the test result
+#   result_df <- data.frame(
+#     TestStatistic = box_test_result$statistic,
+#     PValue = box_test_result$p.value,
+#     Lag = box_test_result$parameter
+#   )
+# 
+#   # Print the data frame as a nice table using kable
+#   kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
+# }
+# box_test(alsi_portret, "Financials")
 ```
 
 
@@ -217,44 +219,14 @@ box_test_all_sectors <- function(data, sectors) {
   kable(result_df, caption = "Ljung-Box Test Results")
 }
 
-box_test_all_sectors(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
+box_test_foo(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
 ```
+The p-value for all sectors as extremely small therefore the results of the box tests rejects the null hypothesis that there are no ARCH effects. This is sufficient motivation to control for the conditional heteroskedasticity. 
 
 ## Rugarch
-
+Below I wrap the model comparison code from the practical in a function so that I can then use lapply to apply the function to each sector and then use do.call to combine the results into a single table. 
 
 ```{r}
-
-
-# Wrapping the function from the practical into a function so that it can be mapped onto 
-garch_model_comparison <- function(data, sector) {
-  models <- 1:4
-  model_list <- list()
-
-  for (p in models) {
-    garchfit <- ugarchspec(
-      variance.model = list(model = c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")[p], garchOrder = c(1, 1)),
-      mean.model = list(armaOrder = c(1, 0), include.mean = TRUE),
-      distribution.model = c("norm", "snorm", "std", "sstd", "ged", "sged", "nig", "ghyp", "jsu")[1]
-    )
-
-    garchfit1 <- ugarchfit(spec = garchfit, data = as.numeric(data[[sector]]))
-    model_list[[p]] <- garchfit1
-  }
-
-  names(model_list) <- c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")
-
-  fit_mat <- sapply(model_list, infocriteria)
-  rownames(fit_mat) <- rownames(infocriteria(model_list[[1]]))
-
-  # Combine the results into a single data frame
-  result_df <- data.frame(
-    Sector = sector,
-    fit_mat
-  )
-
-  result_df
-}
 
 # Apply the GARCH model comparison to all sectors
 sectors <- c("Financials", "Resources", "Industrials")
@@ -267,6 +239,7 @@ combined_results <- do.call(rbind, garch_results)
 kable(combined_results, caption = "GARCH Model Comparison Results")
 
 ```
+
 apARCH performs the best for Financials and Resources so we will use that for the fit. 
 
 I think it could be informative to show the news impact curves to highlight the differences between the different types of model specs

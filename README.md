@@ -6,12 +6,12 @@ for my code. I aim to code in a functional manner. My project is based
 on the following topic:
 
 Topic: Time-Varying correlation comparison of local indices
-\begin(itemize)
-Drivers of TV-correlation estimates over time
 
-Comparing Financials, Industrials and Resources - how their dynamic
-correlations changed over time, perhaps related to interest rate regimes
-/ currency volatilty regimes. \end{itemize}
+-   Drivers of TV-correlation estimates over time
+
+-   Comparing Financials, Industrials and Resources - how their dynamic
+    correlations changed over time, perhaps related to interest rate
+    regimes / currency volatilty regimes.
 
 # Loading packages
 
@@ -24,8 +24,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 464826 24.9     993422 53.1         NA   669302 35.8
-    ## Vcells 866076  6.7    8388608 64.0      16384  1840206 14.1
+    ## Ncells 464941 24.9     993751 53.1         NA   669302 35.8
+    ## Vcells 866430  6.7    8388608 64.0      16384  1840206 14.1
 
 ``` r
 library(tidyverse)
@@ -179,6 +179,16 @@ repo_raw <- read.csv("data/HistoricalRateDetail.csv")
 
 The following code chunk wrangles and cleans the data. The
 calculate_sector_returns functions does the following:
+
+-   Uses an if function to select a fund (fund_name), extracts the
+    specified sector (sector_name), reweights the weights to sum to 1
+-   Creates a weights and return xts data frame to use with rmsfun safe
+    portfolio return calculator
+-   Calculates the sector return and extracts the relevant components
+    (contribution, weights and value)
+-   Joins the components together to give the final total return for
+    each sector
+
 I then rename the portfolio return to the sector name and join the all
 the sectors in each index together,
 
@@ -236,16 +246,18 @@ repo<- repo_raw %>%
     select(date, repo)
 ```
 
-# Garch fitting
-
-## Return Persistence
+# Garch fitting and ARCH testing
 
 This follows the practical and is complete with respect to the necessary
-tests of ARCH
+tests of ARCH. From here I only use the ALSI index but I can simply
+input the swix_portret instead of alsi_portret for all the functions and
+do the analysis on the SWIX as well. \## Return Persistence I created a
+function that essentially wrapped the code to plot the return
+persistence into a function so I can plot each sector.
 
 ``` r
 #I wrapped the code from the practical into a function where i just need to give the data (as a tbl) sector and it outputs the return persistence graphs
-return_persistence_plotter(alsi_portret, "Financials")
+return_persistence_plotter(data = alsi_portret, sector =  "Financials")
 ```
 
     ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
@@ -344,80 +356,51 @@ acf_plotter(alsi_portret, "Industrials")
     ## Warning in loadfonts_win(quiet = quiet): OS is not Windows. No fonts registered
     ## with windowsFonts().
 
-![](README_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-10-1.png) The ACFs
+show that there does appear to be strong conditional heteroskedasticity
+and long memory showing that there is large return persistence but it is
+also necassary to conduct a formal box test to prove it.
 
 ## Box tests
 
+I started by writing a function that could output the box test for each
+sector but then decided to rather include a for loop that gets the
+relavant statistics for each sector and rbinds them together and outputs
+a single table.
+
 ``` r
-box_test<- function(data, sector){
-    if(sector == "Financials"){
-        play_df<- data %>%
-            select(date, Financials) %>%
-            tbl_xts()
-    }
-
-    if(sector == "Resources"){
-        play_df<- data %>%
-            select(date, Resources) %>%
-            tbl_xts()
-    }
-
-    if(sector == "Industrials"){
-        play_df<- data %>%
-            select(date, Industrials) %>%
-            tbl_xts()
-    }
- box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
-
-  # Create a data frame with the test result
-  result_df <- data.frame(
-    TestStatistic = box_test_result$statistic,
-    PValue = box_test_result$p.value,
-    Lag = box_test_result$parameter
-  )
-
-  # Print the data frame as a nice table using kable
-  kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
-}
-box_test(alsi_portret, "Financials")
+# box_test<- function(data, sector){
+#     if(sector == "Financials"){
+#         play_df<- data %>%
+#             select(date, Financials) %>%
+#             tbl_xts()
+#     }
+# 
+#     if(sector == "Resources"){
+#         play_df<- data %>%
+#             select(date, Resources) %>%
+#             tbl_xts()
+#     }
+# 
+#     if(sector == "Industrials"){
+#         play_df<- data %>%
+#             select(date, Industrials) %>%
+#             tbl_xts()
+#     }
+#  box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
+# 
+#   # Create a data frame with the test result
+#   result_df <- data.frame(
+#     TestStatistic = box_test_result$statistic,
+#     PValue = box_test_result$p.value,
+#     Lag = box_test_result$parameter
+#   )
+# 
+#   # Print the data frame as a nice table using kable
+#   kable(result_df, caption =glue("Ljung-Box Test Results: {sector}"))
+# }
+# box_test(alsi_portret, "Financials")
 ```
-
-<table>
-<caption>
-Ljung-Box Test Results: Financials
-</caption>
-<thead>
-<tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:right;">
-TestStatistic
-</th>
-<th style="text-align:right;">
-PValue
-</th>
-<th style="text-align:right;">
-Lag
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-X-squared
-</td>
-<td style="text-align:right;">
-2667.797
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-12
-</td>
-</tr>
-</tbody>
-</table>
 
 ``` r
 box_test_all_sectors <- function(data, sectors) {
@@ -447,7 +430,7 @@ box_test_all_sectors <- function(data, sectors) {
   kable(result_df, caption = "Ljung-Box Test Results")
 }
 
-box_test_all_sectors(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
+box_test_foo(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
 ```
 
 <table>
@@ -515,39 +498,18 @@ Industrials
 </tbody>
 </table>
 
+The p-value for all sectors as extremely small therefore the results of
+the box tests rejects the null hypothesis that there are no ARCH
+effects. This is sufficient motivation to control for the conditional
+heteroskedasticity.
+
 ## Rugarch
 
+Below I wrap the model comparison code from the practical in a function
+so that I can then use lapply to apply the function to each sector and
+then use do.call to combine the results into a single table.
+
 ``` r
-# Wrapping the function from the practical into a function so that it can be mapped onto 
-garch_model_comparison <- function(data, sector) {
-  models <- 1:4
-  model_list <- list()
-
-  for (p in models) {
-    garchfit <- ugarchspec(
-      variance.model = list(model = c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")[p], garchOrder = c(1, 1)),
-      mean.model = list(armaOrder = c(1, 0), include.mean = TRUE),
-      distribution.model = c("norm", "snorm", "std", "sstd", "ged", "sged", "nig", "ghyp", "jsu")[1]
-    )
-
-    garchfit1 <- ugarchfit(spec = garchfit, data = as.numeric(data[[sector]]))
-    model_list[[p]] <- garchfit1
-  }
-
-  names(model_list) <- c("sGARCH", "gjrGARCH", "eGARCH", "apARCH")
-
-  fit_mat <- sapply(model_list, infocriteria)
-  rownames(fit_mat) <- rownames(infocriteria(model_list[[1]]))
-
-  # Combine the results into a single data frame
-  result_df <- data.frame(
-    Sector = sector,
-    fit_mat
-  )
-
-  result_df
-}
-
 # Apply the GARCH model comparison to all sectors
 sectors <- c("Financials", "Resources", "Industrials")
 garch_results <- lapply(sectors, function(sector) garch_model_comparison(alsi_portret, sector))
