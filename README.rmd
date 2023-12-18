@@ -15,7 +15,10 @@ Topic:  Time-Varying correlation comparison of local indices
 	
 * Comparing Financials, Industrials and Resources - how their dynamic correlations changed over time, perhaps related to interest rate regimes / currency volatilty regimes.
 
-	
+```{r setup, include = FALSE, warning=FALSE}
+
+```
+
 
 # Loading packages
 I have added the packages that I use at the beginning with the exception of rmgarch because it has conflicts with packeages in the tidyverse

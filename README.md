@@ -24,8 +24,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 464941 24.9     993751 53.1         NA   669302 35.8
-    ## Vcells 866430  6.7    8388608 64.0      16384  1840206 14.1
+    ## Ncells 465939 24.9     996602 53.3         NA   669302 35.8
+    ## Vcells 868810  6.7    8388608 64.0      16384  1840206 14.1
 
 ``` r
 library(tidyverse)
