@@ -1,12 +1,22 @@
 # Purpose
 
-README for Financial Econometrics Project Essay.
+The purpose of this README is to guide readers as well as myself through
+my code. It provides explanations of functions as well as the reasoning
+for my code. I aim to code in a functional manner. My project is based
+on the following topic:
 
-Topic: Time-Varying correlation comparison of local indices \* Drivers
-of TV-correlation estimates over time \* Comparing Financials,
-Industrials and Resources - how their dynamic correlations changed over
-time, perhaps related to interest rate regimes / currency volatilty
-regimes.
+Topic: Time-Varying correlation comparison of local indices
+\begin(itemize)
+Drivers of TV-correlation estimates over time
+
+Comparing Financials, Industrials and Resources - how their dynamic
+correlations changed over time, perhaps related to interest rate regimes
+/ currency volatilty regimes. \end{itemize}
+
+# Loading packages
+
+I have added the packages that I use at the beginning with the exception
+of rmgarch because it has conflicts with packeages in the tidyverse
 
 ``` r
 rm(list = ls()) # Clean your environment:
@@ -14,8 +24,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 464829 24.9     993431 53.1         NA   669302 35.8
-    ## Vcells 865760  6.7    8388608 64.0      16384  1840208 14.1
+    ## Ncells 464826 24.9     993422 53.1         NA   669302 35.8
+    ## Vcells 866076  6.7    8388608 64.0      16384  1840206 14.1
 
 ``` r
 library(tidyverse)
@@ -144,21 +154,7 @@ library(kableExtra)
     ##     group_rows
 
 ``` r
-library(rmgarch)
-```
-
-    ## 
-    ## Attaching package: 'rmgarch'
-    ## 
-    ## The following objects are masked from 'package:xts':
-    ## 
-    ##     first, last
-    ## 
-    ## The following objects are masked from 'package:dplyr':
-    ## 
-    ##     first, last
-
-``` r
+# library(rmgarch)
 library(MTS)
 library(robustbase)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
@@ -166,7 +162,14 @@ list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.
 
 # Data wrangling
 
-Read in the data
+I am going to use the data from the practical exam. It is the ALSI and
+SWIX all share indexes. I am not sure if I should do the analysis on
+just one of the indexes or both. I start by just using the ALSI but the
+code that follows allows for the use of either if I want to come back
+and do the analysis on both. Both indexes are all share indexes so it
+should not make much of a difference to the results but could be useful
+for a robustness check if needed but may fall out of the scope of this
+project.
 
 ``` r
 alsi_raw <- read_rds("data/ALSI.rds")
@@ -174,10 +177,10 @@ currency <- read_rds("data/USDZAR.rds")
 repo_raw <- read.csv("data/HistoricalRateDetail.csv")
 ```
 
-I am going to use the data from the practical exam. It is the ALSI and
-SWIX all share indexes. I am not sure if I should do the analysis on
-just one of the indexes or both so I am just going to start with both
-and I can always go back and just work with one.
+The following code chunk wrangles and cleans the data. The
+calculate_sector_returns functions does the following:
+I then rename the portfolio return to the sector name and join the all
+the sectors in each index together,
 
 ``` r
 #Lets rename the J403 to SWIX and J203 to ALSI and get them as different data sets. 
@@ -189,7 +192,7 @@ alsi_df <- alsi_raw %>%
 # Now I use a function that incorporates the rmsfuns safe portfolio returns
 #I do this for all three sectors and for each fund
 #SWIX
-swix_fin<- calculate_sector_returns(alsi_df, "Financials", "SWIX") %>% 
+swix_fin<- calculate_sector_returns(data = alsi_df, sector_name = "Financials", fund_name = "SWIX") %>% 
     rename("Financials"="PortfolioReturn")
 
 swix_rec<- calculate_sector_returns(alsi_df, "Resources", "SWIX") %>% 
@@ -219,7 +222,8 @@ alsi_portret <-
     left_join(., alsi_ind, by = "date")
 ```
 
-Now I want to read in the data of the interest rate and exchange rate
+The following cleans and wrangles the repo rate data that was obtained
+from the SARB so that is matches the datafame above.
 
 ``` r
 # Let's clean up the repo data a bit
@@ -886,6 +890,20 @@ xts_rtn <- alsi_portret %>%
 
 ``` r
 library(rmgarch)
+```
+
+    ## 
+    ## Attaching package: 'rmgarch'
+
+    ## The following objects are masked from 'package:xts':
+    ## 
+    ##     first, last
+
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     first, last
+
+``` r
 #Now set the specifications for both the dcc and go-garch
 #a) Set the Univaariate GARCH  spec (using aparch from the table above)
 uspec <- ugarchspec(variance.model = list(model = "apARCH", 
