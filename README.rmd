@@ -132,6 +132,7 @@ repo<- repo_raw %>%
 ```
 # Garch fitting and ARCH testing
 This follows the practical and is complete with respect to the necessary tests of ARCH. From here I only use the ALSI index but I can simply input the swix_portret instead of alsi_portret for all the functions and do the analysis on the SWIX as well.
+
 ## Return Persistence
 I created a function that essentially wrapped the code to plot the return persistence into a function so I can plot each sector.
 ```{r warning=FALSE}
@@ -267,13 +268,14 @@ I think it could be informative to show the news impact curves to highlight the 
 
 
 # Multivariate
+Following the literature comparisons between DCC, aDCC GO-GARCH are used.
 
 ## Interest rate regime
 A slight detour, I want to stratify the sample to get high and low volatility in the repo. This follows the additional practical.
 ```{r}
 Idxs <- alsi_portret %>% 
     gather(sector, ret, -date) %>% # needs to be in long format
-    mutate(Year = format(date, "%Y")) %>% 
+    mutate(Year = format(date, "%Y")) %>% # I am using monthly data so I need a new year column, The rest follows from the practical
     group_by(sector) %>% 
     mutate(Top = quantile(ret, 0.99), Bot = quantile(ret, 0.01)) %>% 
   
@@ -297,8 +299,6 @@ Low_Vol <- repoSD %>%  filter(SD < BotQtile) %>% pull(Year)
 
 
 Perf_comparisons <- function(Idxs, Ys, Alias){
-  # For stepping through uncomment:
-  # YMs <- Hi_Vol
   Unconditional_SD <- 
     
   Idxs %>% 
@@ -328,10 +328,10 @@ perf_lo <- Perf_comparisons(Idxs, Ys = Low_Vol, Alias = "Low_Vol")
 kableExtra::kable(perf_hi)
 kableExtra::kable(perf_lo)
 ```
+Now that I have the volatility periods I can get the time-varying correlations with the three different methodologies to compare. First I import the renammingdcc function so that I can easily extract the correlations to plot.
 
 
 
-Following the literature (Cite) comparisons between DCC, aDCC GO-GARCH are used.
 ```{r}
 
 #For all of the multivariate estimates we need to call in the renamingdcc function from the practical to make the extraction of the correlation 
@@ -373,16 +373,13 @@ DCC.TV.Cor
 ```
 
 ## DCC 
-
+Below I follow the practical to estimate the DCC between sectors but for ease of extraction I rename the sectors and then join the ZAR/USD exchange rate as it will also be used to in the analysis. The inclusion of the exchange rate follows Fakhfekh et al,. (2020) and Ali et al,. (2022).
 ```{r}
 library(tidyverse)
 xts_rtn <- alsi_portret %>% 
     rename("FIN" = "Financials", "REC"= "Resources", "IND" = "Industrials") %>% # This is to get more easible readible paies
     left_join(., currency %>% mutate(EX = value/lag(value)-1) %>% filter(date > dplyr::first(date)) %>% select(date, EX), by = "date") %>% 
     tbl_xts()
-
-
-
 
 ```
 
@@ -439,8 +436,6 @@ dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.va
 ```
 
 ```{r warning=FALSE}
-
-
 
 
 #Now lets get the two plots
@@ -511,10 +506,11 @@ finplot(dcc_plot3)
 ```
 
 ## aDCC
+I follow exactly the same process, only changing the model spec to aDCC.
 ```{r warning=FALSE}
 spec.adcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
     distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
-        "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
+        "FPE")[1], model = c("DCC", "aDCC")[2]) # I now use the aDCC model spec
 
 # d) Enable clustering for speed:
 cl = makePSOCKcluster(10)
@@ -621,12 +617,13 @@ finplot(adcc_plot3)
 ```
 
 ## GO-GARCH
+Lastly I fit a GO-GARCH, again folowing the practical, using the same univariate GARCH spec.
 ```{r warning=FALSE}
 
 
 
 spec.go <- gogarchspec(multi_univ_garch_spec, 
-                       distribution.model = 'mvnorm', # or manig.
+                       distribution.model = 'mvnorm', 
                        ica = 'fastica') # Note: we use the fastICA
 cl <- makePSOCKcluster(10)
 multf <- multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)

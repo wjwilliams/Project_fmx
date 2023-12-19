@@ -124,9 +124,12 @@ repo<- repo_raw %>%
 This follows the practical and is complete with respect to the necessary
 tests of ARCH. From here I only use the ALSI index but I can simply
 input the swix_portret instead of alsi_portret for all the functions and
-do the analysis on the SWIX as well. \## Return Persistence I created a
-function that essentially wrapped the code to plot the return
-persistence into a function so I can plot each sector.
+do the analysis on the SWIX as well.
+
+## Return Persistence
+
+I created a function that essentially wrapped the code to plot the
+return persistence into a function so I can plot each sector.
 
 ``` r
 #I wrapped the code from the practical into a function where i just need to give the data (as a tbl) sector and it outputs the return persistence graphs
@@ -608,6 +611,9 @@ highlight the differences between the different types of model specs
 
 # Multivariate
 
+Following the literature comparisons between DCC, aDCC GO-GARCH are
+used.
+
 ## Interest rate regime
 
 A slight detour, I want to stratify the sample to get high and low
@@ -616,7 +622,7 @@ volatility in the repo. This follows the additional practical.
 ``` r
 Idxs <- alsi_portret %>% 
     gather(sector, ret, -date) %>% # needs to be in long format
-    mutate(Year = format(date, "%Y")) %>% 
+    mutate(Year = format(date, "%Y")) %>% # I am using monthly data so I need a new year column, The rest follows from the practical
     group_by(sector) %>% 
     mutate(Top = quantile(ret, 0.99), Bot = quantile(ret, 0.01)) %>% 
   
@@ -640,8 +646,6 @@ Low_Vol <- repoSD %>%  filter(SD < BotQtile) %>% pull(Year)
 
 
 Perf_comparisons <- function(Idxs, Ys, Alias){
-  # For stepping through uncomment:
-  # YMs <- Hi_Vol
   Unconditional_SD <- 
     
   Idxs %>% 
@@ -825,8 +829,10 @@ Low_Vol
 </tbody>
 </table>
 
-Following the literature (Cite) comparisons between DCC, aDCC GO-GARCH
-are used.
+Now that I have the volatility periods I can get the time-varying
+correlations with the three different methodologies to compare. First I
+import the renammingdcc function so that I can easily extract the
+correlations to plot.
 
 ``` r
 #For all of the multivariate estimates we need to call in the renamingdcc function from the practical to make the extraction of the correlation 
@@ -868,6 +874,12 @@ DCC.TV.Cor
 ```
 
 ## DCC
+
+Below I follow the practical to estimate the DCC between sectors but for
+ease of extraction I rename the sectors and then join the ZAR/USD
+exchange rate as it will also be used to in the analysis. The inclusion
+of the exchange rate follows Fakhfekh et al,. (2020) and Ali et al,.
+(2022).
 
 ``` r
 library(tidyverse)
@@ -1054,10 +1066,12 @@ finplot(dcc_plot3)
 
 ## aDCC
 
+I follow exactly the same process, only changing the model spec to aDCC.
+
 ``` r
 spec.adcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
     distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
-        "FPE")[1], model = c("DCC", "aDCC")[1]) # maybe come back and use aDCC and comparison between the three is prominant in the literature
+        "FPE")[1], model = c("DCC", "aDCC")[2]) # I now use the aDCC model spec
 
 # d) Enable clustering for speed:
 cl = makePSOCKcluster(10)
@@ -1097,27 +1111,27 @@ print(adcc.time.var.cor[, , 1:3])
 
     ## , , 2013-01-02
     ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.31946400  0.55800734 -0.31162200
-    ## REC  0.3194640  1.00000000  0.45718973 -0.04753173
-    ## IND  0.5580073  0.45718973  1.00000000 -0.06455733
-    ## EX  -0.3116220 -0.04753173 -0.06455733  1.00000000
+    ##            FIN        REC        IND         EX
+    ## FIN  1.0000000  0.3216334  0.5594467 -0.3075786
+    ## REC  0.3216334  1.0000000  0.4589785 -0.0441639
+    ## IND  0.5594467  0.4589785  1.0000000 -0.0611511
+    ## EX  -0.3075786 -0.0441639 -0.0611511  1.0000000
     ## 
     ## , , 2013-01-03
     ## 
     ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36542794  0.56680526 -0.29449748
-    ## REC  0.3654279  1.00000000  0.46435285 -0.02125422
-    ## IND  0.5668053  0.46435285  1.00000000 -0.05752756
-    ## EX  -0.2944975 -0.02125422 -0.05752756  1.00000000
+    ## FIN  1.0000000  0.36743129  0.56821466 -0.29073864
+    ## REC  0.3674313  1.00000000  0.46600103 -0.01817805
+    ## IND  0.5682147  0.46600103  1.00000000 -0.05422884
+    ## EX  -0.2907386 -0.01817805 -0.05422884  1.00000000
     ## 
     ## , , 2013-01-04
     ## 
     ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36211091  0.56695002 -0.28759352
-    ## REC  0.3621109  1.00000000  0.45489114 -0.02669019
-    ## IND  0.5669500  0.45489114  1.00000000 -0.04202187
-    ## EX  -0.2875935 -0.02669019 -0.04202187  1.00000000
+    ## FIN  1.0000000  0.36399470  0.56833150 -0.28408943
+    ## REC  0.3639947  1.00000000  0.45644535 -0.02372198
+    ## IND  0.5683315  0.45644535  1.00000000 -0.03881542
+    ## EX  -0.2840894 -0.02372198 -0.03881542  1.00000000
 
 ``` r
 # Now again follow the code in the prac to ensure we end up with bivariate pairs
@@ -1203,9 +1217,12 @@ finplot(adcc_plot3)
 
 ## GO-GARCH
 
+Lastly I fit a GO-GARCH, again folowing the practical, using the same
+univariate GARCH spec.
+
 ``` r
 spec.go <- gogarchspec(multi_univ_garch_spec, 
-                       distribution.model = 'mvnorm', # or manig.
+                       distribution.model = 'mvnorm', 
                        ica = 'fastica') # Note: we use the fastICA
 cl <- makePSOCKcluster(10)
 multf <- multifit(multi_univ_garch_spec, xts_rtn, cluster = cl)
