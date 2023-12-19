@@ -16,149 +16,22 @@ Topic: Time-Varying correlation comparison of local indices
 # Loading packages
 
 I have added the packages that I use at the beginning with the exception
-of rmgarch because it has conflicts with packeages in the tidyverse
+of rmgarch because it has conflicts with packeages in the tidyverse. I
+then also source in all my functions from the code folder.
 
-``` r
-rm(list = ls()) # Clean your environment:
-gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
-```
-
-    ##          used (Mb) gc trigger (Mb) limit (Mb) max used (Mb)
-    ## Ncells 465959 24.9     996660 53.3         NA   669302 35.8
-    ## Vcells 868870  6.7    8388608 64.0      16384  1840206 14.1
-
-``` r
-library(tidyverse)
-```
-
-    ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.2 ──
-    ## ✔ ggplot2 3.4.0     ✔ purrr   1.0.2
-    ## ✔ tibble  3.2.1     ✔ dplyr   1.1.2
-    ## ✔ tidyr   1.3.0     ✔ stringr 1.5.0
-    ## ✔ readr   2.1.4     ✔ forcats 0.5.2
-    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-    ## ✖ dplyr::filter() masks stats::filter()
-    ## ✖ dplyr::lag()    masks stats::lag()
-
-``` r
-library(lubridate)
-```
-
-    ## Loading required package: timechange
-    ## 
-    ## Attaching package: 'lubridate'
-    ## 
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     date, intersect, setdiff, union
-
-``` r
-library(fmxdat)
-library(tbl2xts)
-library(rmsfuns)
-library(glue)
-library(PortfolioAnalytics)
-```
-
-    ## Loading required package: zoo
-    ## 
-    ## Attaching package: 'zoo'
-    ## 
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     as.Date, as.Date.numeric
-    ## 
-    ## Loading required package: xts
-    ## 
-    ## ######################### Warning from 'xts' package ##########################
-    ## #                                                                             #
-    ## # The dplyr lag() function breaks how base R's lag() function is supposed to  #
-    ## # work, which breaks lag(my_xts). Calls to lag(my_xts) that you type or       #
-    ## # source() into this session won't work correctly.                            #
-    ## #                                                                             #
-    ## # Use stats::lag() to make sure you're not using dplyr::lag(), or you can add #
-    ## # conflictRules('dplyr', exclude = 'lag') to your .Rprofile to stop           #
-    ## # dplyr from breaking base R's lag() function.                                #
-    ## #                                                                             #
-    ## # Code in packages is not affected. It's protected by R's namespace mechanism #
-    ## # Set `options(xts.warn_dplyr_breaks_lag = FALSE)` to suppress this warning.  #
-    ## #                                                                             #
-    ## ###############################################################################
-    ## 
-    ## Attaching package: 'xts'
-    ## 
-    ## The following objects are masked from 'package:dplyr':
-    ## 
-    ##     first, last
-    ## 
-    ## Loading required package: foreach
-    ## 
-    ## Attaching package: 'foreach'
-    ## 
-    ## The following objects are masked from 'package:purrr':
-    ## 
-    ##     accumulate, when
-    ## 
-    ## Loading required package: PerformanceAnalytics
-    ## 
-    ## Attaching package: 'PerformanceAnalytics'
-    ## 
-    ## The following object is masked from 'package:graphics':
-    ## 
-    ##     legend
-
-``` r
-library(rugarch)
-```
-
-    ## Loading required package: parallel
-    ## 
-    ## Attaching package: 'rugarch'
-    ## 
-    ## The following object is masked from 'package:purrr':
-    ## 
-    ##     reduce
-    ## 
-    ## The following object is masked from 'package:stats':
-    ## 
-    ##     sigma
-
-``` r
-library(forecast)
-```
-
-    ## Registered S3 method overwritten by 'quantmod':
-    ##   method            from
-    ##   as.zoo.data.frame zoo
-
-``` r
-library(gridExtra)
-```
-
-    ## 
-    ## Attaching package: 'gridExtra'
-    ## 
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     combine
-
-``` r
-library(kableExtra)
-```
-
-    ## 
-    ## Attaching package: 'kableExtra'
-    ## 
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     group_rows
-
-``` r
-# library(rmgarch)
-library(MTS)
-library(robustbase)
-list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
-```
+-   fmxdat
+-   tidyverse
+-   lubridate
+-   tbl2xts
+-   rmsfun
+-   glue
+-   PortfolioAnalytics
+-   rugarch
+-   forecast
+-   gridExtra
+-   kableExtra
+-   MTS
+-   robustbase
 
 # Data wrangling
 
@@ -735,6 +608,223 @@ highlight the differences between the different types of model specs
 
 # Multivariate
 
+## Interest rate regime
+
+A slight detour, I want to stratify the sample to get high and low
+volatility in the repo. This follows the additional practical.
+
+``` r
+Idxs <- alsi_portret %>% 
+    gather(sector, ret, -date) %>% # needs to be in long format
+    mutate(Year = format(date, "%Y")) %>% 
+    group_by(sector) %>% 
+    mutate(Top = quantile(ret, 0.99), Bot = quantile(ret, 0.01)) %>% 
+  
+  mutate(ret = ifelse(ret > Top, Top, 
+                         
+                         ifelse(ret < Bot, Bot, ret))) %>% ungroup()
+
+repoSD <- repo %>% 
+    mutate(Year = format(date, "%Y")) %>% 
+    arrange(date) %>% 
+  
+  group_by(Year) %>% summarise(SD = sd(repo)*sqrt(12)) %>% 
+  
+ 
+  mutate(TopQtile = quantile(SD, 0.75, na.rm = TRUE),
+         
+         BotQtile = quantile(SD, 0.25, na.rm = TRUE))
+
+Hi_Vol <- repoSD %>% filter(SD > TopQtile) %>% pull(Year)
+Low_Vol <- repoSD %>%  filter(SD < BotQtile) %>% pull(Year)
+
+
+Perf_comparisons <- function(Idxs, Ys, Alias){
+  # For stepping through uncomment:
+  # YMs <- Hi_Vol
+  Unconditional_SD <- 
+    
+  Idxs %>% 
+    
+    group_by(sector) %>% 
+    
+    mutate(Full_SD = sd(ret) * sqrt(12)) %>% 
+    
+    filter(Year %in% Ys) %>% 
+    
+    summarise(SD = sd(ret) * sqrt(12), across(.cols = starts_with("Full"), .fns = max)) %>% 
+    
+    arrange(desc(SD)) %>% mutate(Period = Alias) %>% 
+    
+    group_by(sector) %>% 
+    
+    mutate(Ratio = SD / Full_SD)
+    
+    Unconditional_SD
+  
+}
+
+perf_hi <- Perf_comparisons(Idxs, Ys = Hi_Vol, Alias = "High_Vol")
+
+perf_lo <- Perf_comparisons(Idxs, Ys = Low_Vol, Alias = "Low_Vol")
+
+kableExtra::kable(perf_hi)
+```
+
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+sector
+</th>
+<th style="text-align:right;">
+SD
+</th>
+<th style="text-align:right;">
+Full_SD
+</th>
+<th style="text-align:left;">
+Period
+</th>
+<th style="text-align:right;">
+Ratio
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Resources
+</td>
+<td style="text-align:right;">
+0.0672354
+</td>
+<td style="text-align:right;">
+0.0558232
+</td>
+<td style="text-align:left;">
+High_Vol
+</td>
+<td style="text-align:right;">
+1.204435
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Financials
+</td>
+<td style="text-align:right;">
+0.0557236
+</td>
+<td style="text-align:right;">
+0.0452787
+</td>
+<td style="text-align:left;">
+High_Vol
+</td>
+<td style="text-align:right;">
+1.230681
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Industrials
+</td>
+<td style="text-align:right;">
+0.0446390
+</td>
+<td style="text-align:right;">
+0.0370568
+</td>
+<td style="text-align:left;">
+High_Vol
+</td>
+<td style="text-align:right;">
+1.204611
+</td>
+</tr>
+</tbody>
+</table>
+
+``` r
+kableExtra::kable(perf_lo)
+```
+
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+sector
+</th>
+<th style="text-align:right;">
+SD
+</th>
+<th style="text-align:right;">
+Full_SD
+</th>
+<th style="text-align:left;">
+Period
+</th>
+<th style="text-align:right;">
+Ratio
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Resources
+</td>
+<td style="text-align:right;">
+0.0512756
+</td>
+<td style="text-align:right;">
+0.0558232
+</td>
+<td style="text-align:left;">
+Low_Vol
+</td>
+<td style="text-align:right;">
+0.9185355
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Financials
+</td>
+<td style="text-align:right;">
+0.0426065
+</td>
+<td style="text-align:right;">
+0.0452787
+</td>
+<td style="text-align:left;">
+Low_Vol
+</td>
+<td style="text-align:right;">
+0.9409849
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Industrials
+</td>
+<td style="text-align:right;">
+0.0379507
+</td>
+<td style="text-align:right;">
+0.0370568
+</td>
+<td style="text-align:left;">
+Low_Vol
+</td>
+<td style="text-align:right;">
+1.0241229
+</td>
+</tr>
+</tbody>
+</table>
+
 Following the literature (Cite) comparisons between DCC, aDCC GO-GARCH
 are used.
 
@@ -895,36 +985,72 @@ dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.va
 dcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Financials")+
-       theme(axis.title.x = element_blank())
+       theme(axis.title.x = element_blank()) + 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 #Now Resources
 dcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 # Lastly for Industrials
 dcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 finplot(dcc_plot1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ``` r
 finplot(dcc_plot2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 ``` r
 finplot(dcc_plot3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
 
 ## aDCC
 
@@ -1007,37 +1133,73 @@ adcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = adcc.time.
 adcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Financials")+
-       theme(axis.title.x = element_blank())
+       theme(axis.title.x = element_blank())+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 #Now Resources
 adcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 # Lastly for Industrials
 adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 ```
 
 ``` r
 finplot(adcc_plot1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-23-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
 ``` r
 finplot(adcc_plot2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-25-1.png)
 
 ``` r
 finplot(adcc_plot3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-25-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-26-1.png)
 
 ## GO-GARCH
 
@@ -1068,31 +1230,67 @@ renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
 ``` r
 go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 ```
 
 ``` r
 finplot(go1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-28-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-29-1.png)
 
 ``` r
 finplot(go2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-29-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-30-1.png)
 
 ``` r
 finplot(go3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-31-1.png)

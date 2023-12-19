@@ -21,8 +21,22 @@ Topic:  Time-Varying correlation comparison of local indices
 
 
 # Loading packages
-I have added the packages that I use at the beginning with the exception of rmgarch because it has conflicts with packeages in the tidyverse
-```{r warning=FALSE}
+I have added the packages that I use at the beginning with the exception of rmgarch because it has conflicts with packeages in the tidyverse. I then also source in all my functions from the code folder.
+
+* fmxdat
+* tidyverse
+* lubridate
+* tbl2xts
+* rmsfun
+* glue
+* PortfolioAnalytics
+* rugarch
+* forecast
+* gridExtra
+* kableExtra
+* MTS
+* robustbase
+```{r warning=FALSE, include=FALSE}
 
 rm(list = ls()) # Clean your environment:
 gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
@@ -253,6 +267,70 @@ I think it could be informative to show the news impact curves to highlight the 
 
 
 # Multivariate
+
+## Interest rate regime
+A slight detour, I want to stratify the sample to get high and low volatility in the repo. This follows the additional practical.
+```{r}
+Idxs <- alsi_portret %>% 
+    gather(sector, ret, -date) %>% # needs to be in long format
+    mutate(Year = format(date, "%Y")) %>% 
+    group_by(sector) %>% 
+    mutate(Top = quantile(ret, 0.99), Bot = quantile(ret, 0.01)) %>% 
+  
+  mutate(ret = ifelse(ret > Top, Top, 
+                         
+                         ifelse(ret < Bot, Bot, ret))) %>% ungroup()
+
+repoSD <- repo %>% 
+    mutate(Year = format(date, "%Y")) %>% 
+    arrange(date) %>% 
+  
+  group_by(Year) %>% summarise(SD = sd(repo)*sqrt(12)) %>% 
+  
+ 
+  mutate(TopQtile = quantile(SD, 0.75, na.rm = TRUE),
+         
+         BotQtile = quantile(SD, 0.25, na.rm = TRUE))
+
+Hi_Vol <- repoSD %>% filter(SD > TopQtile) %>% pull(Year)
+Low_Vol <- repoSD %>%  filter(SD < BotQtile) %>% pull(Year)
+
+
+Perf_comparisons <- function(Idxs, Ys, Alias){
+  # For stepping through uncomment:
+  # YMs <- Hi_Vol
+  Unconditional_SD <- 
+    
+  Idxs %>% 
+    
+    group_by(sector) %>% 
+    
+    mutate(Full_SD = sd(ret) * sqrt(12)) %>% 
+    
+    filter(Year %in% Ys) %>% 
+    
+    summarise(SD = sd(ret) * sqrt(12), across(.cols = starts_with("Full"), .fns = max)) %>% 
+    
+    arrange(desc(SD)) %>% mutate(Period = Alias) %>% 
+    
+    group_by(sector) %>% 
+    
+    mutate(Ratio = SD / Full_SD)
+    
+    Unconditional_SD
+  
+}
+
+perf_hi <- Perf_comparisons(Idxs, Ys = Hi_Vol, Alias = "High_Vol")
+
+perf_lo <- Perf_comparisons(Idxs, Ys = Low_Vol, Alias = "Low_Vol")
+
+kableExtra::kable(perf_hi)
+kableExtra::kable(perf_lo)
+```
+
+
+
 Following the literature (Cite) comparisons between DCC, aDCC GO-GARCH are used.
 ```{r}
 
@@ -361,23 +439,63 @@ dcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = dcc.time.va
 ```
 
 ```{r warning=FALSE}
+
+
+
+
 #Now lets get the two plots
 #Starting with financials
 dcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Financials")+
-       theme(axis.title.x = element_blank())
+       theme(axis.title.x = element_blank()) + 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 #Now Resources
 dcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 # Lastly for Industrials
 dcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")
+    colour = Pairs)) + theme_fmx() + ggtitle("Dynamic Conditional Correlations: Industricals")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 finplot(dcc_plot1)
@@ -436,18 +554,54 @@ adcc.time.var.cor <- renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = adcc.time.
 adcc_plot1 <- ggplot(dcc.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
     colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Financials")+
-       theme(axis.title.x = element_blank())
+       theme(axis.title.x = element_blank())+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 #Now Resources
 adcc_plot2 <- ggplot(dcc.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 # Lastly for Industrials
 adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")
+    colour = Pairs)) + theme_fmx() + ggtitle("Assymetric Dynamic Conditional Correlations: Industricals")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 
 ```
@@ -497,15 +651,51 @@ renamingdcc(ReturnSeries = xts_rtn, DCC.TV.Cor = gog.time.var.cor)
 ```{r warning=FALSE}
 go1 <- ggplot(gog.time.var.cor %>% filter(grepl("FIN_", Pairs), 
     !grepl("_FIN", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Financials")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 go2 <- ggplot(gog.time.var.cor %>% filter(grepl("REC_", Pairs), 
     !grepl("_REC", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Resources")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs), 
     !grepl("_IND", Pairs))) + geom_line(aes(x = date, y = Rho, 
-    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")
+    colour = Pairs)) + theme_fmx() + ggtitle("Go-GARCH: Industrials")+ 
+  annotate("rect", xmin = as.Date("2013-01-01"), xmax = as.Date("2013-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2018-01-01"), xmax = as.Date("2018-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2020-01-01"), xmax = as.Date("2020-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "blue", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2022-01-01"), xmax = as.Date("2022-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3) +
+  annotate("rect", xmin = as.Date("2023-01-01"), xmax = as.Date("2023-12-31"), 
+           ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.3)
 
 ```
 
