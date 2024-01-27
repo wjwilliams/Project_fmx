@@ -216,33 +216,6 @@ a single table.
 ```
 
 ``` r
-box_test_all_sectors <- function(data, sectors) {
-  results_list <- list()
-
-  for (sector in sectors) {
-    if (sector %in% colnames(data)) {
-      play_df <- data %>%
-        select(date, !!sym(sector)) %>%
-        tbl_xts()
-
-      box_test_result <- Box.test(coredata(play_df^2), type = "Ljung-Box", lag = 12)
-
-      results_list[[sector]] <- data.frame(
-        TestStatistic = box_test_result$statistic,
-        PValue = box_test_result$p.value,
-        Lag = box_test_result$parameter
-      )
-    } else {
-      warning(paste("Sector", sector, "not found in the data. Skipping."))
-    }
-  }
-   # Combine all results into a single data frame
-  result_df <- do.call(rbind, results_list)
-
-  # Print the data frame as a nice table using kable
-  kable(result_df, caption = "Ljung-Box Test Results")
-}
-
 box_test_foo(alsi_portret, sectors = c("Financials", "Resources", "Industrials"))
 ```
 
@@ -834,45 +807,6 @@ correlations with the three different methodologies to compare. First I
 import the renammingdcc function so that I can easily extract the
 correlations to plot.
 
-``` r
-#For all of the multivariate estimates we need to call in the renamingdcc function from the practical to make the extraction of the correlation 
-# estimates easier 
-renamingdcc <- function(ReturnSeries, DCC.TV.Cor) {
-  
-ncolrtn <- ncol(ReturnSeries)
-namesrtn <- colnames(ReturnSeries)
-paste(namesrtn, collapse = "_")
-
-nam <- c()
-xx <- mapply(rep, times = ncolrtn:1, x = namesrtn)
-# Now let's be creative in designing a nested for loop to save the names corresponding to the columns of interest.. 
-
-# TIP: draw what you want to achieve on a paper first. Then apply code.
-
-# See if you can do this on your own first.. Then check vs my solution:
-
-nam <- c()
-for (j in 1:(ncolrtn)) {
-for (i in 1:(ncolrtn)) {
-  nam[(i + (j-1)*(ncolrtn))] <- paste(xx[[j]][1], xx[[i]][1], sep="_")
-}
-}
-
-colnames(DCC.TV.Cor) <- nam
-
-# So to plot all the time-varying correlations wrt SBK:
- # First append the date column that has (again) been removed...
-DCC.TV.Cor <- 
-    data.frame( cbind( date = index(ReturnSeries), DCC.TV.Cor)) %>% # Add date column which dropped away...
-    mutate(date = as.Date(date)) %>%  tbl_df() 
-
-DCC.TV.Cor <- DCC.TV.Cor %>% gather(Pairs, Rho, -date)
-
-DCC.TV.Cor
-
-}
-```
-
 ## DCC
 
 Below I follow the practical to estimate the DCC between sectors but for
@@ -954,34 +888,8 @@ mc1 = MCHdiag(xts_rtn, covmat)
 # the DCC model, it again requires some gymnastics from our
 # side.  First consider what the list looks like:
 dcc.time.var.cor <- rcor(fit.dcc)
-print(dcc.time.var.cor[, , 1:3])
-```
+# print(dcc.time.var.cor[, , 1:3])
 
-    ## , , 2013-01-02
-    ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.31946400  0.55800734 -0.31162200
-    ## REC  0.3194640  1.00000000  0.45718973 -0.04753173
-    ## IND  0.5580073  0.45718973  1.00000000 -0.06455733
-    ## EX  -0.3116220 -0.04753173 -0.06455733  1.00000000
-    ## 
-    ## , , 2013-01-03
-    ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36542794  0.56680526 -0.29449748
-    ## REC  0.3654279  1.00000000  0.46435285 -0.02125422
-    ## IND  0.5668053  0.46435285  1.00000000 -0.05752756
-    ## EX  -0.2944975 -0.02125422 -0.05752756  1.00000000
-    ## 
-    ## , , 2013-01-04
-    ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36211091  0.56695002 -0.28759352
-    ## REC  0.3621109  1.00000000  0.45489114 -0.02669019
-    ## IND  0.5669500  0.45489114  1.00000000 -0.04202187
-    ## EX  -0.2875935 -0.02669019 -0.04202187  1.00000000
-
-``` r
 # Now again follow the code in the prac to ensure we end up with bivariate pairs
 # rather than lists of matrices
 dcc.time.var.cor <- aperm(dcc.time.var.cor, c(3, 2, 1))
@@ -1050,19 +958,19 @@ dcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs),
 finplot(dcc_plot1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 ``` r
 finplot(dcc_plot2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ``` r
 finplot(dcc_plot3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 ## aDCC
 
@@ -1106,34 +1014,8 @@ mc1 = MCHdiag(xts_rtn, covmat)
 # the DCC model, it again requires some gymnastics from our
 # side.  First consider what the list looks like:
 adcc.time.var.cor <- rcor(fit.adcc)
-print(adcc.time.var.cor[, , 1:3])
-```
+# print(adcc.time.var.cor[, , 1:3])
 
-    ## , , 2013-01-02
-    ## 
-    ##            FIN        REC        IND         EX
-    ## FIN  1.0000000  0.3216334  0.5594467 -0.3075786
-    ## REC  0.3216334  1.0000000  0.4589785 -0.0441639
-    ## IND  0.5594467  0.4589785  1.0000000 -0.0611511
-    ## EX  -0.3075786 -0.0441639 -0.0611511  1.0000000
-    ## 
-    ## , , 2013-01-03
-    ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36743129  0.56821466 -0.29073864
-    ## REC  0.3674313  1.00000000  0.46600103 -0.01817805
-    ## IND  0.5682147  0.46600103  1.00000000 -0.05422884
-    ## EX  -0.2907386 -0.01817805 -0.05422884  1.00000000
-    ## 
-    ## , , 2013-01-04
-    ## 
-    ##            FIN         REC         IND          EX
-    ## FIN  1.0000000  0.36399470  0.56833150 -0.28408943
-    ## REC  0.3639947  1.00000000  0.45644535 -0.02372198
-    ## IND  0.5683315  0.45644535  1.00000000 -0.03881542
-    ## EX  -0.2840894 -0.02372198 -0.03881542  1.00000000
-
-``` r
 # Now again follow the code in the prac to ensure we end up with bivariate pairs
 # rather than lists of matrices
 adcc.time.var.cor <- aperm(adcc.time.var.cor, c(3, 2, 1))
@@ -1201,19 +1083,19 @@ adcc_plot3 <- ggplot(dcc.time.var.cor %>% filter(grepl("IND_", Pairs),
 finplot(adcc_plot1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-23-1.png)
 
 ``` r
 finplot(adcc_plot2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-25-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
 ``` r
 finplot(adcc_plot3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-26-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-25-1.png)
 
 ## GO-GARCH
 
@@ -1298,16 +1180,16 @@ go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs),
 finplot(go1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-29-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-28-1.png)
 
 ``` r
 finplot(go2)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-29-1.png)
 
 ``` r
 finplot(go3)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-31-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-30-1.png)
