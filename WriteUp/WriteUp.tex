@@ -1,0 +1,532 @@
+\documentclass[11pt,preprint, authoryear]{elsarticle}
+
+\usepackage{lmodern}
+%%%% My spacing
+\usepackage{setspace}
+\setstretch{1.2}
+\DeclareMathSizes{12}{14}{10}{10}
+
+% Wrap around which gives all figures included the [H] command, or places it "here". This can be tedious to code in Rmarkdown.
+\usepackage{float}
+\let\origfigure\figure
+\let\endorigfigure\endfigure
+\renewenvironment{figure}[1][2] {
+    \expandafter\origfigure\expandafter[H]
+} {
+    \endorigfigure
+}
+
+\let\origtable\table
+\let\endorigtable\endtable
+\renewenvironment{table}[1][2] {
+    \expandafter\origtable\expandafter[H]
+} {
+    \endorigtable
+}
+
+
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+    \usepackage{xltxtra,xunicode}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+
+\usepackage{amssymb, amsmath, amsthm, amsfonts}
+
+\def\bibsection{\section*{References}} %%% Make "References" appear before bibliography
+
+
+\usepackage[round]{natbib}
+
+\usepackage{longtable}
+\usepackage[margin=2.3cm,bottom=2cm,top=2.5cm, includefoot]{geometry}
+\usepackage{fancyhdr}
+\usepackage[bottom, hang, flushmargin]{footmisc}
+\usepackage{graphicx}
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{1.3ex plus 0.5ex minus 0.3ex}
+\usepackage{textcomp}
+\renewcommand{\headrulewidth}{0.2pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+\usepackage{array}
+\newcolumntype{x}[1]{>{\centering\arraybackslash\hspace{0pt}}p{#1}}
+
+%%%%  Remove the "preprint submitted to" part. Don't worry about this either, it just looks better without it:
+\makeatletter
+\def\ps@pprintTitle{%
+  \let\@oddhead\@empty
+  \let\@evenhead\@empty
+  \let\@oddfoot\@empty
+  \let\@evenfoot\@oddfoot
+}
+\makeatother
+
+ \def\tightlist{} % This allows for subbullets!
+
+\usepackage{hyperref}
+\hypersetup{breaklinks=true,
+            bookmarks=true,
+            colorlinks=true,
+            citecolor=blue,
+            urlcolor=blue,
+            linkcolor=blue,
+            pdfborder={0 0 0}}
+
+
+% The following packages allow huxtable to work:
+\usepackage{siunitx}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{calc}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{caption}
+
+
+\newenvironment{columns}[1][]{}{}
+
+\newenvironment{column}[1]{\begin{minipage}{#1}\ignorespaces}{%
+\end{minipage}
+\ifhmode\unskip\fi
+\aftergroup\useignorespacesandallpars}
+
+\def\useignorespacesandallpars#1\ignorespaces\fi{%
+#1\fi\ignorespacesandallpars}
+
+\makeatletter
+\def\ignorespacesandallpars{%
+  \@ifnextchar\par
+    {\expandafter\ignorespacesandallpars\@gobble}%
+    {}%
+}
+\makeatother
+
+\newenvironment{CSLReferences}[2]{%
+}
+
+\urlstyle{same}  % don't use monospace font for urls
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\setcounter{secnumdepth}{5}
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
+%%% Include extra packages specified by user
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+
+%%% Hard setting column skips for reports - this ensures greater consistency and control over the length settings in the document.
+%% page layout
+%% paragraphs
+\setlength{\baselineskip}{12pt plus 0pt minus 0pt}
+\setlength{\parskip}{12pt plus 0pt minus 0pt}
+\setlength{\parindent}{0pt plus 0pt minus 0pt}
+%% floats
+\setlength{\floatsep}{12pt plus 0 pt minus 0pt}
+\setlength{\textfloatsep}{20pt plus 0pt minus 0pt}
+\setlength{\intextsep}{14pt plus 0pt minus 0pt}
+\setlength{\dbltextfloatsep}{20pt plus 0pt minus 0pt}
+\setlength{\dblfloatsep}{14pt plus 0pt minus 0pt}
+%% maths
+\setlength{\abovedisplayskip}{12pt plus 0pt minus 0pt}
+\setlength{\belowdisplayskip}{12pt plus 0pt minus 0pt}
+%% lists
+\setlength{\topsep}{10pt plus 0pt minus 0pt}
+\setlength{\partopsep}{3pt plus 0pt minus 0pt}
+\setlength{\itemsep}{5pt plus 0pt minus 0pt}
+\setlength{\labelsep}{8mm plus 0mm minus 0mm}
+\setlength{\parsep}{\the\parskip}
+\setlength{\listparindent}{\the\parindent}
+%% verbatim
+\setlength{\fboxsep}{5pt plus 0pt minus 0pt}
+
+
+
+\begin{document}
+
+
+
+\begin{frontmatter}  %
+
+\title{Diversification analysis of the ALSI using GARCH (come back to
+this)}
+
+% Set to FALSE if wanting to remove title (for submission)
+
+
+
+
+\author[Add1]{Wesley Williams}
+\ead{21691126@sun.ac.za}
+
+
+
+
+
+\address[Add1]{Stellenosch University, South Africa}
+
+
+
+\vspace{1cm}
+
+
+
+
+
+\vspace{0.5cm}
+
+\end{frontmatter}
+
+\setcounter{footnote}{0}
+
+
+
+%________________________
+% Header and Footers
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{fancy}
+\chead{}
+\rhead{}
+\lfoot{}
+\rfoot{\footnotesize Page \thepage}
+\lhead{}
+%\rfoot{\footnotesize Page \thepage } % "e.g. Page 2"
+\cfoot{}
+
+%\setlength\headheight{30pt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%________________________
+
+\headsep 35pt % So that header does not go over title
+
+
+
+
+\hypertarget{introduction}{%
+\section{\texorpdfstring{Introduction
+\label{Introduction}}{Introduction }}\label{introduction}}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/Figure1-1} 
+
+}
+
+\caption{Cumulative Returns of ALSI \label{Figure1}}\label{fig:Figure1}
+\end{figure}
+
+\hypertarget{data}{%
+\section{Data}\label{data}}
+
+The data used to get the sector returns is the All Share (ALSI) J203
+index. This index represents 99\% of the full market cap value of all
+eligible securities listed on the Main Board of the Johannesburg Stock
+Exchange (JSE) (\protect\hyperlink{ref-jse_website}{JSE, 2024}). Sector
+returns are then created for the financial, industrial and resource
+sectors. All stocks categorised in each of these sectors is reweighted
+in order to create a index for each sector.
+
+Other data that was used is the United States Dollar (USD) to South
+African Rand (ZAR) exchange rate as the depreciation or appreciation of
+the domestic currency compared to the Dollar is an indicator of changes
+in the global economy. Lastly the historical repurchase rate (REPO) was
+obtained from the South African Reserve Bank (SARB).
+
+\hypertarget{methodology}{%
+\section{Methodology}\label{methodology}}
+
+I begin by conducting multiple tests for autoregressive conditional
+heteroskedasticity (ARCH) effects. I do this through graphing the the
+returns, absolute returns and squared returns which can be found in
+figures \ref{FigureA1}, \ref{FigureA2} and \ref{FigureA3}. These figures
+highlights that the return series of all three sectors show strong first
+order persistence and potential periods of second order persistence.
+Lastly, it appears that the series has a long memory in the second order
+process. To check for this I conduct more formal tests for ARCH effects.
+
+\hypertarget{tests-for-autoregressive-conditional-heteroskedasticity-arch-effects.}{%
+\subsection{Tests for Autoregressive Conditional Heteroskedasticity
+(ARCH)
+effects.}\label{tests-for-autoregressive-conditional-heteroskedasticity-arch-effects.}}
+
+The first formal test that I conduct is the plotting of the
+autocorrelation functions of the returns, absolute returns and squared
+returns for all sectors. Figures \ref{FigureA4}, \ref{FigureA5} and
+\ref{FigureA6} can be found in the appendix. These figures provide more
+evidence of conditional heteroskedasticity and long memory for all of
+the sectors. The last test is a formal Box-Ljung test where the null
+hypothesis is that there are no ARCH effects. Table 3.1 presents the
+results of the test and it is clear that the null hypothesis of no ARCH
+effects can be rejected at the 1\% confidence level. This means that the
+condictional heteroskedasticity needs to be controlled for.
+
+\begin{table}
+
+\caption{\label{tab:unnamed-chunk-5}Ljung-Box Test Results}
+\centering
+\begin{tabular}[t]{l|r|r|r}
+\hline
+  & TestStatistic & PValue & Lag\\
+\hline
+Financials & 2667.7971 & 0 & 12\\
+\hline
+Resources & 1431.3349 & 0 & 12\\
+\hline
+Industrials & 948.8227 & 0 & 12\\
+\hline
+\end{tabular}
+\end{table}
+
+\hypertarget{univariate-model-selection}{%
+\subsection{Univariate Model
+Selection}\label{univariate-model-selection}}
+
+A univariate GARCH specification is necassary for the multivariate
+specification. There are a vast number of extentions to the original
+GARCH formulation, therefore to obtain the model that best fits the data
+I employ multiple information criteria to assess the potential model
+fits in the univariate case. Table 3.2 presents the results of the
+information criteria and the best model for each sector is different but
+on average the best fitting model across all sectors is eGARCH so that
+is the specification that will be used to estimate the dynamic
+conditional correlations.
+
+\begin{table}
+
+\caption{\label{tab:unnamed-chunk-6}GARCH Model Comparison Results}
+\centering
+\begin{tabular}[t]{l|l|r|r|r|r}
+\hline
+  & Sector & sGARCH & gjrGARCH & eGARCH & apARCH\\
+\hline
+Akaike & Financials & -5.872282 & -5.881912 & -5.881702 & -5.884481\\
+\hline
+Bayes & Financials & -5.861235 & -5.868656 & -5.868446 & -5.869016\\
+\hline
+Shibata & Financials & -5.872289 & -5.881922 & -5.881712 & -5.884495\\
+\hline
+Hannan-Quinn & Financials & -5.868285 & -5.877115 & -5.876905 & -5.878885\\
+\hline
+Akaike1 & Resources & -5.466560 & -5.479735 & -5.475142 & -5.479025\\
+\hline
+Bayes1 & Resources & -5.455513 & -5.466479 & -5.461886 & -5.463559\\
+\hline
+Shibata1 & Resources & -5.466567 & -5.479745 & -5.475153 & -5.479038\\
+\hline
+Hannan-Quinn1 & Resources & -5.462562 & -5.474938 & -5.470345 & -5.473428\\
+\hline
+Akaike2 & Industrials & -6.246073 & -6.267709 & -6.270655 & -6.261725\\
+\hline
+Bayes2 & Industrials & -6.235026 & -6.254453 & -6.257399 & -6.246260\\
+\hline
+Shibata2 & Industrials & -6.246080 & -6.267719 & -6.270665 & -6.261739\\
+\hline
+Hannan-Quinn2 & Industrials & -6.242075 & -6.262912 & -6.265858 & -6.256129\\
+\hline
+\end{tabular}
+\end{table}
+
+\hypertarget{multivariate-models}{%
+\subsection{Multivariate Models}\label{multivariate-models}}
+
+Now that I have the univariate model specifications I can now fit the
+multivariate model. I fit three different multivariate GARCH models:
+DCC, aDCC and GO-GARCH. This follows the literature as the comparison
+between these two or three models is common Ali, Raza, Vo \& Le
+(\protect\hyperlink{ref-ali2022modelling}{2022}). After fitting the DCC
+model I extract the model diagnostics that present multiple Portmanteau
+and rank based tests that assess whether there is serial correlation.
+Tsay (\protect\hyperlink{ref-tsay2013}{2013}) provides an in depth
+discussion about these tests. Th null hypothesis for all the tests are
+that there is no serial correlation and hence no conditional
+heteroskedasticity. Tsay (\protect\hyperlink{ref-tsay2013}{2013: 403})
+notes that \(Q_k (m)\) statistic works well when the distribution of
+innovations are normal but struggles when fatter tails are present . The
+robust statistic employs 5\% trimming as a means to get a more robust
+statistic. The results presented in table \ref{Port} show that for all
+tests except for the robust version (\(Q_r^{k} (m)\)) rejects the null
+hypothesis of no conditional heteroskedasticity whereas the robust
+version fails to reject.
+
+\begin{table}[htbp]
+\centering
+\caption{Portmanteau tests}
+\label{Port}
+\begin{tabular}{|c|c|c|c|}
+\hline
+$Q(m)$ & $Rank-based \ test$ & $Q_k(m)$ & $Q_r^{k} (m)$ \\
+\hline
+\hline
+51.32 & 18.63 & 255.96 & 173.18 \\
+(0.000) & (0.045) & (0.000) & (0.225) \\
+\hline
+\multicolumn{4}{|l|}{Note: P-values given in brackets.} \\
+\hline
+\end{tabular}
+\end{table}
+
+\hypertarget{results}{%
+\section{Results}\label{results}}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/Figure2-1} 
+
+}
+
+\caption{DCC  \label{Figure2}}\label{fig:Figure2}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/Figure3-1} 
+
+}
+
+\caption{aDCC  \label{Figure3}}\label{fig:Figure3}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/Figure4-1} 
+
+}
+
+\caption{GO-GARCH  \label{Figure4}}\label{fig:Figure4}
+\end{figure}
+
+\hypertarget{conclusion}{%
+\section{Conclusion}\label{conclusion}}
+
+\newpage
+
+\hypertarget{references}{%
+\section*{References}\label{references}}
+\addcontentsline{toc}{section}{References}
+
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\vadjust pre{\hypertarget{ref-ali2022modelling}{}}%
+Ali, S., Raza, N., Vo, X.V. \& Le, V. 2022. Modelling the joint dynamics
+of financial assets using MGARCH family models: Insights into hedging
+and diversification strategies. \emph{Resources Policy}. 78:102861.
+
+\leavevmode\vadjust pre{\hypertarget{ref-fakhfekh2021hedging}{}}%
+Fakhfekh, M., Jeribi, A., Ghorbel, A. \& Hachicha, N. 2021. Hedging
+stock market prices with WTI, gold, VIX and cryptocurrencies: A
+comparison between DCC, ADCC and GO-GARCH models. \emph{International
+Journal of Emerging Markets}. (ahead-of-print).
+
+\leavevmode\vadjust pre{\hypertarget{ref-jse_website}{}}%
+JSE. 2024. \emph{The all share index (J203)}. {[}Online{]}, Available:
+\url{https://www.jse.co.za/all-share-j203}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-katzke2013south}{}}%
+Katzke, N. et al. 2013. South african sector return correlations: Using
+DCC and ADCC multivariate GARCH techniques to uncover the underlying
+dynamics. \emph{South African Sector Return Correlations: using DCC and
+ADCC Multivariate GARCH techniques to uncover the underlying dynamics}.
+10--17.
+
+\leavevmode\vadjust pre{\hypertarget{ref-tsay2013}{}}%
+Tsay, R.S. 2013. \emph{Multivariate time series analysis: With r and
+financial applications}. John Wiley \& Sons.
+
+\end{CSLReferences}
+
+\newpage
+
+\hypertarget{appendix}{%
+\section{Appendix}\label{appendix}}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA1-1} 
+
+}
+
+\caption{Return Persistence: Financials \label{FigureA1}}\label{fig:FigureA1}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA2-1} 
+
+}
+
+\caption{Return Persistence: Resources \label{FigureA2}}\label{fig:FigureA2}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA3-1} 
+
+}
+
+\caption{Return Persistence: Industrials \label{FigureA3}}\label{fig:FigureA3}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA4-1} 
+
+}
+
+\caption{Autocorrelation Functions: Financials \label{FigureA4}}\label{fig:FigureA4}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA5-1} 
+
+}
+
+\caption{Autocorrelation Functions: Resources \label{FigureA5}}\label{fig:FigureA5}
+\end{figure}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/FigureA6-1} 
+
+}
+
+\caption{Autocorrelation Functions: Industrials \label{FigureA6}}\label{fig:FigureA6}
+\end{figure}
+
+\bibliography{Tex/ref}
+
+
+
+
+
+\end{document}

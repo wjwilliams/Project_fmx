@@ -442,7 +442,7 @@ finplot(dcc_plot3)
 
 ## aDCC
 I follow exactly the same process, only changing the model spec to aDCC.
-```{r warning=FALSE}
+```{r, warning=FALSE}
 spec.adcc = dccspec(multi_univ_garch_spec, dccOrder = c(1, 1), 
     distribution = "mvnorm", lag.criterion = c("AIC", "HQ", "SC", 
         "FPE")[1], model = c("DCC", "aDCC")[2]) # I now use the aDCC model spec
