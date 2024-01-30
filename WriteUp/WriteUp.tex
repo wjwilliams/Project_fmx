@@ -1,4 +1,4 @@
-\documentclass[11pt,preprint, authoryear]{elsarticle}
+\documentclass[12pt,preprint, authoryear]{elsarticle}
 
 \usepackage{lmodern}
 %%%% My spacing
@@ -178,8 +178,7 @@
 
 \begin{frontmatter}  %
 
-\title{Diversification analysis of the ALSI using GARCH (come back to
-this)}
+\title{Time-varying Correlations Between Sectors of the All Share Index}
 
 % Set to FALSE if wanting to remove title (for submission)
 
@@ -193,7 +192,8 @@ this)}
 
 
 
-\address[Add1]{Stellenosch University, South Africa}
+\address[Add1]{Final Project for Financial Econometrics 871 at
+Stellenosch University, South Africa}
 
 
 
@@ -236,14 +236,36 @@ this)}
 \section{\texorpdfstring{Introduction
 \label{Introduction}}{Introduction }}\label{introduction}}
 
-\begin{figure}[H]
+Diversification is the cornerstone of modern day finance, thus
+understanding the co-movements of assets is essential for any
+diversification or hedging strategy. Katzke
+(\protect\hyperlink{ref-katzke2013south}{2013}) highlights that
+investors have a ``home-bias'', where local assets are favoured over
+international assets. This can lead to risks of underdiversification
+when there is homogoneity in return movements between local sectors and
+assets. This project, therefore, aims to identify and investigate the
+co-movements of three of the largest sectors in South Africa.
 
-{\centering \includegraphics{WriteUp_files/figure-latex/Figure1-1} 
+The use of Mulitvariate Generalized Autoregressive Conditional
+Heteroskedasticity (MV-GARCH) to obtain dynamic conditional correlations
+has become more prevalent in finance and portfolio theory literature. It
+has been used for many different purposes. Ho \& Tsui
+(\protect\hyperlink{ref-ho2004analysis}{2004}) \& Katzke
+(\protect\hyperlink{ref-katzke2013south}{2013}) employ MV-GARCH models
+to investigate diversification opportunities and threats through
+inter-sector correlations. Fakhfekh, Jeribi, Ghorbel \& Hachicha
+(\protect\hyperlink{ref-fakhfekh2021hedging}{2021}) \& Ali, Raza, Vo \&
+Le (\protect\hyperlink{ref-ali2022modelling}{2022}) instead look at
+hedging strategies utilising a vast array of different financial assets
+and instruments.
 
-}
-
-\caption{Cumulative Returns of ALSI \label{Figure1}}\label{fig:Figure1}
-\end{figure}
+In this paper I extract three sectors' returns from the All Share J203
+in order to derive the time-varying correlations between the three
+sectors and the United States Dollar to South African Rand exchange
+rate. The rest of the paper is structured as follows, section two
+describes the data, section three desribes the methods and statistical
+tests used, section four presents the final results and lastly, section
+five concludes.
 
 \hypertarget{data}{%
 \section{Data}\label{data}}
@@ -254,7 +276,8 @@ eligible securities listed on the Main Board of the Johannesburg Stock
 Exchange (JSE) (\protect\hyperlink{ref-jse_website}{JSE, 2024}). Sector
 returns are then created for the financial, industrial and resource
 sectors. All stocks categorised in each of these sectors is reweighted
-in order to create a index for each sector.
+in order to create a index for each sector. The cumulative returns are
+presented in figure \ref{Figure1}.
 
 Other data that was used is the United States Dollar (USD) to South
 African Rand (ZAR) exchange rate as the depreciation or appreciation of
@@ -262,11 +285,20 @@ the domestic currency compared to the Dollar is an indicator of changes
 in the global economy. Lastly the historical repurchase rate (REPO) was
 obtained from the South African Reserve Bank (SARB).
 
+\begin{figure}[H]
+
+{\centering \includegraphics{WriteUp_files/figure-latex/Figure1-1} 
+
+}
+
+\caption{Cumulative Returns of ALSI \label{Figure1}}\label{fig:Figure1}
+\end{figure}
+
 \hypertarget{methodology}{%
 \section{Methodology}\label{methodology}}
 
 I begin by conducting multiple tests for autoregressive conditional
-heteroskedasticity (ARCH) effects. I do this through graphing the the
+heteroskedasticity (ARCH) effects. I do this through graphing the
 returns, absolute returns and squared returns which can be found in
 figures \ref{FigureA1}, \ref{FigureA2} and \ref{FigureA3}. These figures
 highlights that the return series of all three sectors show strong first
@@ -362,7 +394,7 @@ Hannan-Quinn2 & Industrials & -6.242075 & -6.262912 & -6.265858 & -6.256129\\
 Now that I have the univariate model specifications I can now fit the
 multivariate model. I fit three different multivariate GARCH models:
 DCC, aDCC and GO-GARCH. This follows the literature as the comparison
-between these two or three models is common Ali, Raza, Vo \& Le
+between these two or three models is common Ali \emph{et al.}
 (\protect\hyperlink{ref-ali2022modelling}{2022}). After fitting the DCC
 model I extract the model diagnostics that present multiple Portmanteau
 and rank based tests that assess whether there is serial correlation.
@@ -398,6 +430,41 @@ $Q(m)$ & $Rank-based \ test$ & $Q_k(m)$ & $Q_r^{k} (m)$ \\
 \hypertarget{results}{%
 \section{Results}\label{results}}
 
+Figures \ref{Figure2}, \ref{Figure3} and \ref{Figure4} present the time
+varying conditional correlations between the three sectors of interest
+as well as the USD/ZAR exchange rate. Figure \ref{Figure2} presents the
+standard dynamic conditional correlations (DCC). \ref{Figure3} presents
+the assymetric dynamic conditional correlations (aDCC), which accounts
+for the assymetry of positive and negative shocks. Lastly, figure
+\ref{Figure4} presents the time varying correlations from a Generalized
+Orthogonal GARCH (GO-GARCH) specification. I also employed
+stratification methods to get the most and least volatile periods of the
+REPO rate.
+
+Across all of the specifications it is clear to see that during high
+periods of volatitlity in the REPO rate the correlations between the
+sectors is also more volatile. All specifications also highlight that
+there is large heterogeneity in the correlations over time. This serves
+as another motivating factor to not use time-invariant estimations of
+the correlations. The inter-sector correlations tend to move around 0.5
+for both the DCC and aDCC with fluctuations within a band of 0.8 and 0.
+The correlation between the financial and industrial sectors is the
+highest followed by resources and industrials and then resources and
+financials. The correlations between the sectors and the exchange rate
+clearly show the financial sector is consistently negatively correlated
+with the exchange rate. For the other two sectors a positive correlation
+tends to be present during low volatility periods of the REPO and
+negative during high volatility periods.
+
+There appears to be little difference between the DCC and aDCC
+specifications. When looking at GO-GARCH however, the correlations
+instead have much smaller fluctuations. Boswijk \& Weide
+(\protect\hyperlink{ref-boswijk2006wake}{2006: 21}) state that the
+smaller fluctuations can be seen as positive or a negative depending on
+the case. In this case it helps to provide a more consistent measure.
+The most important finding is that there does not seem to be a trend in
+any of the correlations.
+
 \begin{figure}[H]
 
 {\centering \includegraphics{WriteUp_files/figure-latex/Figure2-1} 
@@ -428,6 +495,17 @@ $Q(m)$ & $Rank-based \ test$ & $Q_k(m)$ & $Q_r^{k} (m)$ \\
 \hypertarget{conclusion}{%
 \section{Conclusion}\label{conclusion}}
 
+This paper set out to estimate time-varying correlations of three
+sectors of the All Share index J203 as well as the USD/ZAR exchange
+rate. This was done by first fitting the multiple univariate GARCH
+models before evaluating the fit with multiple infomation criteria. Once
+the best univariate fit was selected it was used to fit the multivariate
+GARCH. The results show that the use of time-varying correlations are
+justified and if time-invariant correlations are used it will lead to an
+inefficiently diversified portfolio. Secondly, I found that the
+financial sector is the most suseptible to Rand depreciation while the
+other sectors correlations fluctuate around 0.
+
 \newpage
 
 \hypertarget{references}{%
@@ -441,22 +519,30 @@ Ali, S., Raza, N., Vo, X.V. \& Le, V. 2022. Modelling the joint dynamics
 of financial assets using MGARCH family models: Insights into hedging
 and diversification strategies. \emph{Resources Policy}. 78:102861.
 
+\leavevmode\vadjust pre{\hypertarget{ref-boswijk2006wake}{}}%
+Boswijk, H.P. \& Weide, R. van der. 2006. \emph{Wake me up before you
+GO-GARCH}. Tinbergen Institute Discussion Paper.
+
 \leavevmode\vadjust pre{\hypertarget{ref-fakhfekh2021hedging}{}}%
 Fakhfekh, M., Jeribi, A., Ghorbel, A. \& Hachicha, N. 2021. Hedging
 stock market prices with WTI, gold, VIX and cryptocurrencies: A
 comparison between DCC, ADCC and GO-GARCH models. \emph{International
 Journal of Emerging Markets}. (ahead-of-print).
 
+\leavevmode\vadjust pre{\hypertarget{ref-ho2004analysis}{}}%
+Ho, K.-Y. \& Tsui, A.K. 2004. An analysis of the sectoral indices of
+tokyo stock exchange: A multivariate GARCH approach with time varying
+correlations. In \emph{Stochastic finance, autumn school and
+international conference}.
+
 \leavevmode\vadjust pre{\hypertarget{ref-jse_website}{}}%
 JSE. 2024. \emph{The all share index (J203)}. {[}Online{]}, Available:
 \url{https://www.jse.co.za/all-share-j203}.
 
 \leavevmode\vadjust pre{\hypertarget{ref-katzke2013south}{}}%
-Katzke, N. et al. 2013. South african sector return correlations: Using
-DCC and ADCC multivariate GARCH techniques to uncover the underlying
-dynamics. \emph{South African Sector Return Correlations: using DCC and
-ADCC Multivariate GARCH techniques to uncover the underlying dynamics}.
-10--17.
+Katzke, N. 2013. South african sector return correlations: Using DCC and
+ADCC multivariate GARCH techniques to uncover the underlying dynamics.
+\emph{Stellenbosch Economic Working Papers: 17/13}. 1--31.
 
 \leavevmode\vadjust pre{\hypertarget{ref-tsay2013}{}}%
 Tsay, R.S. 2013. \emph{Multivariate time series analysis: With r and

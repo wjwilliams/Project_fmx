@@ -3,7 +3,7 @@
 # Remove comments and add values where applicable.
 # The descriptions below should be self-explanatory
 
-title: "Diversification analysis of the ALSI using GARCH (come back to this)"
+title: "Time-varying Correlations Between Sectors of the All Share Index"
 #subtitle: "This will appear as Right Header"
 
 documentclass: "elsarticle"
@@ -26,7 +26,7 @@ Thesis_FP: FALSE
 # Comment: ----- Follow this pattern for up to 5 authors
 AddTitle: TRUE # Use FALSE when submitting to peer reviewed platform. This will remove author names.
 Author1: "Wesley Williams"  # First Author - note the thanks message displayed as an italic footnote of first page.
-Ref1: "Stellenosch University, South Africa" # First Author's Affiliation
+Ref1: "Final Project for Financial Econometrics 871 at Stellenosch University, South Africa" # First Author's Affiliation
 Email1: "21691126\\@sun.ac.za" # First Author's Email address
 
 # Author2: "John Smith"
@@ -77,7 +77,7 @@ RemovePreprintSubmittedTo: TRUE  # Removes the 'preprint submitted to...' at bot
 Journal: "Journal of Finance"   # Journal that the paper will be submitting to, if RemovePreprintSubmittedTo is set to TRUE.
 toc: FALSE                       # Add a table of contents
 numbersections: TRUE             # Should sections (and thus figures and tables) be numbered?
-fontsize: 11pt                  # Set fontsize
+fontsize: 12pt                  # Set fontsize
 linestretch: 1.2                # Set distance between lines.
 link-citations: TRUE            # This creates dynamic links to the papers in reference list.
 
@@ -199,9 +199,20 @@ xts_rtn <- alsi_portret %>%
 
 # Introduction \label{Introduction}
 
+Diversification is the cornerstone of modern day finance, thus understanding the co-movements of assets is essential for any diversification or hedging strategy. @katzke2013south highlights that investors have a ``home-bias", where local assets are favoured over international assets. This can lead to risks of underdiversification when there is homogoneity in return movements between local sectors and assets. This project, therefore, aims to identify and investigate the co-movements of three of the largest sectors in South Africa.
+
+The use of Mulitvariate Generalized Autoregressive Conditional Heteroskedasticity (MV-GARCH) to obtain dynamic conditional correlations has become more prevalent in finance and portfolio theory literature. It has been used for many different purposes. @ho2004analysis \& @katzke2013south employ MV-GARCH models to investigate diversification opportunities and threats through inter-sector correlations. @fakhfekh2021hedging \& @ali2022modelling instead look at hedging strategies utilising a vast array of different financial assets and instruments. 
+
+In this paper I extract three sectors' returns from the All Share J203 in order to derive the time-varying correlations between the three sectors and the United States Dollar to South African Rand exchange rate. The rest of the paper is structured as follows, section two describes the data, section three desribes the methods and statistical tests used, section four presents the final results and lastly, section five concludes.
 
 
-```{r Figure1,  warning =  FALSE, fig.align = 'center', fig.cap = "Cumulative Returns of ALSI \\label{Figure1}", fig.ext = 'png', fig.height = 3, fig.width = 6}
+# Data 
+
+The data used to get the sector returns is the All Share (ALSI) J203 index. This index represents 99% of the full market cap value of all eligible securities listed on the Main Board of the Johannesburg Stock Exchange (JSE) [@jse_website]. Sector returns are then created for the financial, industrial and resource sectors. All stocks categorised in each of these sectors is reweighted in order to create a index for each sector. The cumulative returns are presented in figure \ref{Figure1}. 
+
+Other data that was used is the United States Dollar (USD) to South African Rand (ZAR) exchange rate as the depreciation or appreciation of the domestic currency compared to the Dollar is an indicator of changes in the global economy. Lastly the historical repurchase rate (REPO) was obtained from the South African Reserve Bank (SARB). 
+
+```{r Figure1,  warning =  FALSE, fig.align = 'center', fig.cap = "Cumulative Returns of ALSI \\label{Figure1}", fig.ext = 'png', fig.height = 5, fig.width = 6}
 cum_sectors<- alsi_portret %>% 
     gather(Sector, ret, -date) %>% 
     arrange(date) %>% 
@@ -231,18 +242,9 @@ cum_sectors
 
 
 ```
-
-
-
-# Data 
-
-The data used to get the sector returns is the All Share (ALSI) J203 index. This index represents 99% of the full market cap value of all eligible securities listed on the Main Board of the Johannesburg Stock Exchange (JSE) [@jse_website]. Sector returns are then created for the financial, industrial and resource sectors. All stocks categorised in each of these sectors is reweighted in order to create a index for each sector. 
-
-Other data that was used is the United States Dollar (USD) to South African Rand (ZAR) exchange rate as the depreciation or appreciation of the domestic currency compared to the Dollar is an indicator of changes in the global economy. Lastly the historical repurchase rate (REPO) was obtained from the South African Reserve Bank (SARB). 
-
 # Methodology
 
-I begin by conducting multiple tests for autoregressive conditional heteroskedasticity (ARCH) effects. I do this through graphing the the returns, absolute returns and squared returns which can be found in figures \ref{FigureA1}, \ref{FigureA2} and \ref{FigureA3}. These figures highlights that the return series of all three sectors show strong first order persistence and potential periods of second order persistence. Lastly, it appears that the series has a long memory in the second order process. To check for this I conduct more formal tests for ARCH effects.
+I begin by conducting multiple tests for autoregressive conditional heteroskedasticity (ARCH) effects. I do this through graphing the returns, absolute returns and squared returns which can be found in figures \ref{FigureA1}, \ref{FigureA2} and \ref{FigureA3}. These figures highlights that the return series of all three sectors show strong first order persistence and potential periods of second order persistence. Lastly, it appears that the series has a long memory in the second order process. To check for this I conduct more formal tests for ARCH effects.
 
 ## Tests for Autoregressive Conditional Heteroskedasticity (ARCH) effects. 
 
@@ -290,6 +292,11 @@ $Q(m)$ & $Rank-based \ test$ & $Q_k(m)$ & $Q_r^{k} (m)$ \\
 \end{table}
 
 # Results
+Figures \ref{Figure2}, \ref{Figure3} and \ref{Figure4} present the time varying conditional correlations between the three sectors of interest as well as the USD/ZAR exchange rate. Figure \ref{Figure2} presents the standard dynamic conditional correlations (DCC). \ref{Figure3} presents the assymetric dynamic conditional correlations (aDCC), which accounts for the assymetry of positive and negative shocks. Lastly, figure \ref{Figure4} presents the time varying correlations from a Generalized Orthogonal GARCH (GO-GARCH) specification. I also employed stratification methods to get the most and least volatile periods of the REPO rate. 
+
+Across all of the specifications it is clear to see that during high periods of volatitlity in the REPO rate the correlations between the sectors is also more volatile. All specifications also highlight that there is large heterogeneity in the correlations over time. This serves as another motivating factor to not use time-invariant estimations of the correlations. The inter-sector correlations tend to move around 0.5 for both the DCC and aDCC with fluctuations within a band of 0.8 and 0. The correlation between the financial and industrial sectors is the highest followed by resources and industrials and then resources and financials. The correlations between the sectors and the exchange rate clearly show the financial sector is consistently negatively correlated with the exchange rate. For the other two sectors a positive correlation tends to be present during low volatility periods of the REPO and negative during high volatility periods.
+
+There appears to be little difference between the DCC and aDCC specifications. When looking at GO-GARCH however, the correlations instead have much smaller fluctuations. @boswijk2006wake[p. 21] state that the smaller fluctuations can be seen as positive or a negative depending on the case. In this case it helps to provide a more consistent measure. The most important finding is that there does not seem to be a trend in any of the correlations.
 
 
 ```{r, results='hide'}
@@ -583,7 +590,7 @@ go3 <- ggplot(gog.time.var.cor %>% filter(grepl("IND_", Pairs),
 ```
 
 # Conclusion
-
+This paper set out to estimate time-varying correlations of three sectors of the All Share index J203 as well as the USD/ZAR exchange rate. This was done by first fitting the multiple univariate GARCH models before evaluating the fit with multiple infomation criteria. Once the best univariate fit was selected it was used to fit the multivariate GARCH. The results show that the use of time-varying correlations are justified and if time-invariant correlations are used it will lead to an inefficiently diversified portfolio. Secondly, I found that the financial sector is the most suseptible to Rand depreciation while the other sectors correlations fluctuate around 0. 
 
 <!-- Make title of bibliography here: -->
 <!-- \newpage -->
